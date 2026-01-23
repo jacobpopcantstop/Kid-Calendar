@@ -12,8 +12,9 @@
             --no-school: #ffcccc;
             --half-day: #fff4cc;
             --early-release: #cce5ff;
+            --field-trip: #d1e7dd; /* Mint Green */
             --today-highlight: #ffeb3b;
-            --font-size: 20pt;
+            --font-size: 16pt; 
             --selection-highlight: #b3d9ff;
         }
 
@@ -42,51 +43,102 @@
             .calendar-grid-wrapper { overflow: visible !important; height: auto !important; }
             .day-cell { min-height: 150px !important; }
             .is-today { border: 4px solid black !important; } 
+            
+            input[type="time"] {
+                border: none;
+                background: transparent;
+                appearance: none;
+                width: auto;
+            }
+            
             * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
         }
 
-        .controls {
+        /* NEW CLEAN HEADER STYLES */
+        .header-wrapper {
+            background: #f8f9fa;
+            border-bottom: 4px solid black;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .title-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            background: #f0f0f0;
-            padding: 10px;
-            border: 3px solid black;
-            border-radius: 8px;
-            flex-shrink: 0;
+            margin-bottom: 15px;
+        }
+
+        .app-title {
+            font-size: 24pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .app-subtitle {
+            font-size: 12pt;
+            color: #555;
+            font-weight: normal;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .btn {
             background: black;
             color: white;
             border: none;
-            padding: 8px 15px;
-            font-size: 16pt;
+            padding: 8px 16px;
+            font-size: 14pt;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 6px;
             font-weight: bold;
-            margin-left: 5px;
+            transition: opacity 0.2s;
         }
 
-        .btn:hover {
-            opacity: 0.8;
-        }
+        .btn:hover { opacity: 0.8; }
         
-        .btn-danger { background: #8b0000; font-size: 12pt; }
-        .btn-action { background: #0056b3; font-size: 12pt; }
-        .btn-cancel { background: #555; font-size: 12pt; display: none; }
-        .btn-toggle { background: #551a8b; font-size: 14pt; }
+        /* Button Variants */
+        .btn-nav { background: #333; }
+        .btn-danger { background: #d32f2f; font-size: 12pt; }
+        .btn-action { background: #1976d2; }
+        .btn-magic { background: #673ab7; color: white; }
+        .btn-cancel { background: #616161; display: none; }
+        .btn-toggle { background: #512da8; }
+        .btn-print { background: #2e7d32; }
 
-        .calendar-title {
+        .calendar-title-display {
             text-align: center;
             font-size: 28pt;
             font-weight: bold;
             text-transform: uppercase;
             margin-bottom: 5px;
+            flex-shrink: 0;
+            display: none; /* Hidden in app view, shown in print via JS or CSS logic if needed, but we keep month name in grid header usually */
+        }
+        
+        #month-name {
+            text-align: center;
+            font-size: 24pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 10px 0;
             flex-shrink: 0;
         }
 
@@ -100,7 +152,8 @@
 
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            /* Minimized Weekends: Sun(0.5) ... Sat(0.5) */
+            grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr 1fr 0.5fr; 
             width: 100%;
         }
 
@@ -129,13 +182,10 @@
         }
         
         .weekly-view .day-cell {
-            min-height: 70vh; /* Taller cells for weekly view */
+            min-height: 70vh; 
         }
 
-        /* Hover effect for copy tools */
-        .day-cell:hover .cell-tools {
-            display: flex;
-        }
+        .day-cell:hover .cell-tools { display: flex; }
 
         .cell-tools {
             position: absolute;
@@ -189,21 +239,41 @@
 
         .activity-list {
             margin: 0;
-            padding-left: 20px;
-            font-size: 16pt;
+            padding: 0;
+            flex-grow: 1;
+            list-style: none;
+        }
+
+        .activity-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 4px;
+            padding: 2px;
+            border-radius: 4px;
+        }
+
+        .time-input {
+            font-family: inherit;
+            font-size: 12pt;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.8);
+            width: 95px; 
+            flex-shrink: 0;
+            padding: 0 2px;
+        }
+
+        .activity-text {
             flex-grow: 1;
             outline: none;
-            list-style-type: disc;
+            min-width: 50px;
+            cursor: text;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
-        .activity-list li {
-            margin-bottom: 6px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            position: relative;
-        }
-
-        .activity-list:empty:before {
+        .activity-text:empty:before {
             content: attr(data-placeholder);
             color: #aaa;
             font-style: italic;
@@ -220,8 +290,8 @@
         .type-no-school { background-color: var(--no-school) !important; }
         .type-half-day { background-color: var(--half-day) !important; }
         .type-early-release { background-color: var(--early-release) !important; }
+        .type-field-trip { background-color: var(--field-trip) !important; }
         
-        /* Status bar for copy week mode */
         #status-bar {
             background: #fff3cd;
             color: #856404;
@@ -233,8 +303,7 @@
             margin-bottom: 5px;
         }
 
-        /* Edit Day Modal */
-        #edit-day-modal {
+        #edit-day-modal, #magic-plan-modal {
             display: none;
             position: fixed;
             top: 50%; left: 50%;
@@ -248,36 +317,71 @@
         }
         .modal-row { margin-bottom: 15px; }
         .modal-label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14pt; }
-        .modal-select, .modal-input { 
+        .modal-select, .modal-input, .modal-textarea { 
             width: 100%; 
             padding: 8px; 
             font-size: 14pt; 
             border: 2px solid black;
             font-family: inherit;
         }
+        .modal-textarea { height: 100px; resize: none; }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #673ab7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
 
-    <div class="no-print controls">
-        <button class="btn" onclick="navigatePrev()">← Prev</button>
-        <div style="text-align:center">
-            <strong>Ayshe's Semester Planner</strong><br>
-            <span style="font-size: 12pt;">
-                Auto-colors on <b>Enter</b>. Use <b>Tab</b> to autocomplete.
-                <button class="btn btn-toggle" onclick="toggleView()" id="btn-view-mode">Weekly View</button>
-                <button class="btn btn-action" onclick="startCopyWeekMode()" id="btn-copy-week">Copy Week</button>
-                <button class="btn btn-cancel" onclick="cancelCopyWeek()" id="btn-cancel-week">Cancel</button>
-                <button class="btn btn-danger" onclick="clearData()">Clear Data</button>
-            </span>
+    <div class="no-print header-wrapper">
+        <div class="title-row">
+            <div>
+                <div class="app-title">Ayshe's Semester Planner</div>
+                <div class="app-subtitle">Auto-colors on Enter • Use Tab to autocomplete</div>
+            </div>
+            <!-- Status Bar embedded in header if active, or keep separate. Keeping separate for visibility -->
         </div>
-        <button class="btn" onclick="navigateNext()">Next →</button>
-        <button class="btn" onclick="window.print()" style="background: #2e7d32;">Print Landscape</button>
+
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="btn btn-nav" onclick="navigatePrev()">← Prev</button>
+                <button class="btn btn-nav" onclick="navigateNext()">Next →</button>
+            </div>
+            
+            <div class="toolbar-group">
+                <button class="btn btn-toggle" onclick="toggleView()" id="btn-view-mode">Weekly View</button>
+                <button class="btn btn-magic" onclick="openMagicModal()">✨ Magic Plan</button>
+            </div>
+
+            <div class="toolbar-group">
+                <button class="btn btn-action" onclick="startCopyWeekMode()" id="btn-copy-week">Copy Week</button>
+                <button class="btn btn-cancel" onclick="cancelCopyWeek()" id="btn-cancel-week">Cancel Copy</button>
+                <button class="btn btn-danger" onclick="clearData()">Clear</button>
+                <button class="btn btn-print" onclick="window.print()">Print</button>
+            </div>
+        </div>
     </div>
 
     <div id="status-bar">Select a day in the week you want to COPY FROM...</div>
 
-    <div class="calendar-title" id="month-name">Month Year</div>
+    <div id="month-name">Month Year</div>
     
     <div class="calendar-grid-wrapper">
         <div class="calendar-grid" id="calendar-grid">
@@ -297,6 +401,7 @@
                 <option value="no-school">No School (Red)</option>
                 <option value="half-day">Half Day (Yellow)</option>
                 <option value="early-release">Early Release (Blue)</option>
+                <option value="field-trip">Field Trip (Green)</option>
             </select>
         </div>
         <div class="modal-row">
@@ -309,12 +414,28 @@
         </div>
     </div>
 
+    <!-- Magic Plan Modal -->
+    <div id="magic-plan-modal">
+        <h3>✨ Magic Plan with Gemini</h3>
+        <p style="font-size: 12pt;">Describe what you want to add. Include days, times, and duration.<br>e.g., "Add Math Club every Monday at 3pm for February"</p>
+        <div class="modal-row">
+            <textarea id="magic-prompt" class="modal-textarea" placeholder="Type your plan here..."></textarea>
+        </div>
+        <div style="text-align: right;">
+            <div id="magic-loading" class="loading-spinner"></div>
+            <button class="btn btn-danger" onclick="closeMagicModal()" style="font-size: 12pt;">Cancel</button>
+            <button class="btn btn-magic" onclick="generatePlan()" style="font-size: 12pt;">Generate Plan</button>
+        </div>
+    </div>
+
     <script>
+        const apiKey = "AIzaSyCIlkb0xgRvbLzmENblIUv1BFL8j1WxGwY"; 
+        
         // State
         let currentYear = 2025;
         let currentMonth = 1; 
         let viewMode = 'MONTH'; // 'MONTH' or 'WEEK'
-        let currentWeekStart = new Date(2025, 1, 1); // Tracks the start of the current week viewed
+        let currentWeekStart = new Date(2025, 1, 1); 
         
         let topicColors = JSON.parse(localStorage.getItem('ayshe-topic-colors')) || {};
         let flowPatterns = JSON.parse(localStorage.getItem('ayshe-flow-patterns')) || {}; 
@@ -349,10 +470,8 @@
             "2025-06-10": { type: "half-day", text: "Last Day!" }
         };
         
-        // Load custom events overlay
         let customEvents = JSON.parse(localStorage.getItem('ayshe-custom-events')) || {};
         
-        // Helper to get effective event for a date
         function getEvent(dateKey) {
             return customEvents[dateKey] || defaultEvents[dateKey];
         }
@@ -361,12 +480,10 @@
         let activeSuggestion = null;
         let randomColorIndex = Object.keys(topicColors).length;
         
-        // Copy/Paste State
         let clipboardDay = null;
         let copyWeekState = 'IDLE'; 
         let copyWeekSourceDate = null;
 
-        // Smart Presets
         const PRESET_COLORS = {
             "math": "#a0c4ff", "mathematics": "#a0c4ff",
             "science": "#9bf6ff", "biology": "#9bf6ff", "chemistry": "#9bf6ff",
@@ -375,7 +492,8 @@
             "art": "#bdb2ff", "music": "#bdb2ff",
             "pe": "#caffbf", "gym": "#caffbf",
             "lunch": "#ffd6a5", "break": "#e5e5e5",
-            "study": "#ffadad", "speech": "#ffc4d6", "therapy": "#ffc4d6"
+            "study": "#ffadad", "speech": "#ffc4d6", "therapy": "#ffc4d6",
+            "field trip": "#d1e7dd"
         };
 
         const DISTINCT_PALETTE = [
@@ -386,25 +504,20 @@
 
         const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-        // --- NAVIGATION & VIEW LOGIC ---
-
         function toggleView() {
             if (viewMode === 'MONTH') {
                 viewMode = 'WEEK';
                 document.getElementById('btn-view-mode').innerText = "Monthly View";
-                // Set current week start based on current month/date
                 const today = new Date();
                 if(today.getFullYear() === currentYear && today.getMonth() === currentMonth) {
                     currentWeekStart = new Date(today);
                 } else {
                     currentWeekStart = new Date(currentYear, currentMonth, 1);
                 }
-                // Align to Sunday
                 currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
             } else {
                 viewMode = 'MONTH';
                 document.getElementById('btn-view-mode').innerText = "Weekly View";
-                // Sync month view to the week we were looking at
                 currentMonth = currentWeekStart.getMonth();
                 currentYear = currentWeekStart.getFullYear();
             }
@@ -417,7 +530,6 @@
                 if (currentMonth > 11) { currentMonth = 0; currentYear++; }
             } else {
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-                // Update month/year header based on week center
                 const midWeek = new Date(currentWeekStart);
                 midWeek.setDate(midWeek.getDate() + 3);
                 currentMonth = midWeek.getMonth();
@@ -445,7 +557,6 @@
             const monthHeader = document.getElementById('month-name');
             grid.innerHTML = '';
             
-            // Render Headers
             weekdays.forEach(day => {
                 const div = document.createElement('div');
                 div.className = 'weekday';
@@ -475,16 +586,13 @@
         }
 
         function renderWeekView(grid, header) {
-            // Calculate end of week for display
             const weekEnd = new Date(currentWeekStart);
             weekEnd.setDate(currentWeekStart.getDate() + 6);
-            
             header.innerText = `Week of ${currentWeekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
 
             for (let i = 0; i < 7; i++) {
                 const d = new Date(currentWeekStart);
                 d.setDate(currentWeekStart.getDate() + i);
-                // Create cell passing full date object
                 grid.appendChild(createCellFromDate(d));
             }
         }
@@ -493,7 +601,6 @@
             return createCell(dateObj.getDate(), true, 0, dateObj);
         }
 
-        // Modified createCell to handle date objects or month-relative logic
         function createCell(day, isCurrent, offsetMonth = 0, specificDate = null) {
             const cell = document.createElement('div');
             cell.className = 'day-cell';
@@ -502,29 +609,24 @@
             if (specificDate) {
                 dateObj = specificDate;
             } else {
-                // Month view logic
                 let targetMonth = currentMonth;
                 let targetYear = currentYear;
-                if (offsetMonth === -1) { // Prev month padding
+                if (offsetMonth === -1) { 
                     targetMonth--;
                     if (targetMonth < 0) { targetMonth = 11; targetYear--; }
                 }
                 dateObj = new Date(targetYear, targetMonth, day);
             }
 
-            // In month view, grey out non-current month days
             if (viewMode === 'MONTH' && !isCurrent) {
                 cell.classList.add('not-current-month');
             }
-            // In Month View, disable editing/saving for grey days to keep it simple, 
-            // OR allow it but ensure dateKey is correct (which it is now)
 
             const dateKey = dateObj.toISOString().split('T')[0];
             cell.dataset.dateKey = dateKey; 
             
             cell.innerHTML = `<div class="day-number">${day}</div>`;
 
-            // Tools (Copy/Paste/Edit)
             const tools = document.createElement('div');
             tools.className = 'cell-tools no-print';
             tools.innerHTML = `
@@ -534,13 +636,11 @@
             `;
             cell.appendChild(tools);
 
-            // Check if Today
             const today = new Date();
             if (today.toDateString() === dateObj.toDateString()) {
                 cell.classList.add('is-today');
             }
 
-            // Check Event Type (Merged Default + Custom)
             const eventData = getEvent(dateKey);
             if (eventData) {
                 cell.classList.add(`type-${eventData.type}`);
@@ -554,11 +654,8 @@
 
             const list = document.createElement('ul');
             list.className = 'activity-list';
-            list.contentEditable = true;
             list.dataset.date = dateKey;
-            list.setAttribute('data-placeholder', 'Click to plan...'); 
 
-            // Week Copy Click Handler
             cell.onclick = (e) => {
                 if (copyWeekState !== 'IDLE' && !e.target.closest('button')) {
                     handleWeekCopyClick(dateKey);
@@ -570,48 +667,224 @@
                 list.innerHTML = savedData;
                 applyColorsToList(list);
             } else {
-                list.innerHTML = '<li></li>';
+                // Initialize with one empty row if no data
+                addActivityRow(list);
             }
 
-            list.oninput = (e) => { saveList(list); handleInput(e); };
-            list.addEventListener('paste', (e) => {
+            // Restore input values from HTML attributes if necessary
+            list.querySelectorAll('.time-input').forEach(input => {
+                if(input.getAttribute('value')) input.value = input.getAttribute('value');
+                input.addEventListener('change', () => {
+                    input.setAttribute('value', input.value); // Sync for saving
+                    saveList(list);
+                });
+            });
+            
+            // Set up listeners for text areas
+            list.querySelectorAll('.activity-text').forEach(span => setupTextListeners(span, list));
+
+            cell.appendChild(list);
+            
+            // Allow clicking empty space to focus last item
+            cell.addEventListener('click', (e) => {
+                 if(e.target === cell || e.target === list) {
+                     const rows = list.querySelectorAll('.activity-row');
+                     if(rows.length > 0) {
+                         const lastText = rows[rows.length-1].querySelector('.activity-text');
+                         lastText.focus();
+                     } else {
+                         addActivityRow(list);
+                     }
+                 }
+            });
+
+            return cell;
+        }
+        
+        // --- ROW MANAGEMENT ---
+        
+        function addActivityRow(list, insertAfterRow = null, text = "") {
+            const row = document.createElement('li');
+            row.className = 'activity-row';
+            
+            const timeInput = document.createElement('input');
+            timeInput.type = 'time';
+            timeInput.className = 'time-input';
+            timeInput.addEventListener('change', () => {
+                timeInput.setAttribute('value', timeInput.value);
+                saveList(list);
+            });
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = 'activity-text';
+            textSpan.contentEditable = true;
+            textSpan.innerText = text;
+            textSpan.setAttribute('data-placeholder', 'Plan...');
+            
+            setupTextListeners(textSpan, list);
+            
+            row.appendChild(timeInput);
+            row.appendChild(textSpan);
+            
+            if (insertAfterRow) {
+                insertAfterRow.after(row);
+            } else {
+                list.appendChild(row);
+            }
+            
+            // Auto focus
+            setTimeout(() => textSpan.focus(), 0);
+            
+            // Check color if text exists
+            if(text) autoAssignColor(text);
+            
+            return row;
+        }
+        
+        function setupTextListeners(span, list) {
+            span.addEventListener('input', (e) => {
+                // Handle patterns
+                handleInput(e, span);
+                saveList(list);
+            });
+            
+            span.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const text = (e.clipboardData || window.clipboardData).getData('text');
                 document.execCommand('insertText', false, text);
             });
-            list.onblur = () => {
-                const items = list.querySelectorAll('li');
-                let changed = false;
-                items.forEach(li => { if (li.innerText.trim() === '') { li.remove(); changed = true; } });
-                if (list.innerHTML.trim() === '') { list.innerHTML = '<li></li>'; changed = true; }
-                if(changed) saveList(list);
-            };
-            list.onkeydown = (e) => {
-                if (e.key === 'Tab' && activeSuggestion) { e.preventDefault(); acceptSuggestion(); }
-                if (e.key === 'Enter') {
+            
+            span.addEventListener('blur', () => {
+                if(span.innerText.trim() === '' && list.querySelectorAll('.activity-row').length > 1) {
+                    // Only delete if empty AND not the only row? 
+                    // Actually, let's keep empty rows for manual editing, but maybe remove if completely untouched?
+                    // Let's stick to user explicit delete (backspace) or explicit create
+                }
+                saveList(list);
+            });
+            
+            span.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') {
                     e.preventDefault();
-                    const selection = window.getSelection();
-                    let currentLi = selection.rangeCount > 0 ? selection.getRangeAt(0).startContainer.parentElement.closest('li') : null;
-                    const newLi = document.createElement('li');
-                    if (currentLi) currentLi.after(newLi); else list.appendChild(newLi);
-                    const range = document.createRange();
-                    range.selectNodeContents(newLi);
-                    range.collapse(false);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+                    addActivityRow(list, span.closest('.activity-row'));
                     learnPatterns(list);
+                    // Check color of current
+                    if(span.innerText.length > 1) autoAssignColor(span.innerText);
                     saveList(list);
-                    if(currentLi) {
-                        let text = "";
-                        currentLi.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
-                        text = text.trim();
-                        if (text.length > 1 && !topicColors[text.toLowerCase()]) autoAssignColor(text);
+                }
+                if(e.key === 'Backspace' && span.innerText === '') {
+                    // Remove row if empty and not only row
+                    const rows = list.querySelectorAll('.activity-row');
+                    if(rows.length > 1) {
+                        e.preventDefault();
+                        const row = span.closest('.activity-row');
+                        const prev = row.previousElementSibling;
+                        row.remove();
+                        if(prev) {
+                            const prevText = prev.querySelector('.activity-text');
+                            prevText.focus();
+                            // Move cursor to end
+                            const range = document.createRange();
+                            range.selectNodeContents(prevText);
+                            range.collapse(false);
+                            const sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                        saveList(list);
                     }
                 }
-            };
+                if(e.key === 'Tab' && activeSuggestion) {
+                    e.preventDefault();
+                    acceptSuggestion(span, list);
+                }
+            });
+        }
 
-            cell.appendChild(list);
-            return cell;
+        // --- GEMINI MAGIC PLAN LOGIC ---
+        function openMagicModal() {
+            document.getElementById('magic-plan-modal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('magic-prompt').focus();
+        }
+
+        function closeMagicModal() {
+            document.getElementById('magic-plan-modal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        async function generatePlan() {
+            const prompt = document.getElementById('magic-prompt').value;
+            if(!prompt) return;
+
+            const loading = document.getElementById('magic-loading');
+            loading.style.display = 'inline-block';
+
+            const systemPrompt = `You are a scheduling assistant. The current year is ${currentYear}. 
+            The user will describe activities to add to a calendar. 
+            Return a JSON object where keys are dates in 'YYYY-MM-DD' format and values are ARRAYS of objects.
+            Each object should have 'time' (HH:MM or empty string) and 'text' (activity description).
+            Example: {"2025-02-14": [{"time": "14:00", "text": "Valentine's Party"}], "2025-02-17": [{"time": "", "text": "No School"}]}
+            Do not format as markdown. Return raw JSON only.`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    })
+                });
+
+                const data = await response.json();
+                const text = data.candidates[0].content.parts[0].text;
+                const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const schedule = JSON.parse(cleanJson);
+
+                for (const dateKey in schedule) {
+                    const items = schedule[dateKey];
+                    let newRowsHtml = '';
+                    items.forEach(item => {
+                        const valAttr = item.time ? `value="${item.time}"` : '';
+                        newRowsHtml += `<li class="activity-row" style="${getStyleForTopic(item.text)}">
+                            <input type="time" class="time-input" ${valAttr}>
+                            <span class="activity-text" contenteditable="true" data-placeholder="Plan...">${item.text}</span>
+                        </li>`;
+                        autoAssignColor(item.text); 
+                    });
+                    
+                    const existing = localStorage.getItem(`list-${dateKey}`) || '';
+                    const div = document.createElement('div');
+                    div.innerHTML = existing;
+                    if(div.querySelector('.activity-row') && div.querySelector('.activity-text').innerText === '') {
+                         div.innerHTML = newRowsHtml;
+                    } else {
+                         div.innerHTML += newRowsHtml;
+                    }
+                    localStorage.setItem(`list-${dateKey}`, div.innerHTML);
+                }
+
+                closeMagicModal();
+                renderCalendar(); 
+                alert("✨ Plan Generated Successfully!");
+
+            } catch (error) {
+                console.error(error);
+                alert("Error generating plan. Please try again.");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        function getStyleForTopic(text) {
+             const lower = text.trim().toLowerCase();
+             if(topicColors[lower]) {
+                 const bg = topicColors[lower];
+                 const color = getContrastYIQ(bg);
+                 return `background-color: ${bg}; color: ${color}; border: 1px solid black;`;
+             }
+             return "";
         }
 
         // --- EDIT DAY STATUS LOGIC ---
@@ -623,7 +896,6 @@
             const typeSelect = document.getElementById('day-type-select');
             const labelInput = document.getElementById('day-label-input');
 
-            // Load current data
             const eventData = getEvent(dateKey);
             
             dateInput.value = dateKey;
@@ -645,7 +917,6 @@
             const text = document.getElementById('day-label-input').value;
 
             if (type === "" && text === "") {
-                // Determine if we are deleting an override or just saving blank
                 delete customEvents[dateKey];
             } else {
                 customEvents[dateKey] = { type: type, text: text };
@@ -675,6 +946,7 @@
                 if (confirm("Overwrite this day?")) {
                     list.innerHTML = clipboardDay;
                     saveList(list);
+                    renderCalendar(); 
                 }
             }
         }
@@ -699,7 +971,7 @@
         }
 
         function handleWeekCopyClick(dateKey) {
-            const clickedDate = new Date(dateKey + "T12:00:00"); // Avoid timezone issues
+            const clickedDate = new Date(dateKey + "T12:00:00"); 
             const dayOfWeek = clickedDate.getDay(); 
             const weekStart = new Date(clickedDate);
             weekStart.setDate(clickedDate.getDate() - dayOfWeek);
@@ -749,54 +1021,40 @@
             applyColorsToList(list);
         }
 
-        function handleInput(e) {
-            const list = e.currentTarget;
-            const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            const li = selection.getRangeAt(0).startContainer.parentElement.closest('li');
-            if (!li) return;
-            let text = "";
-            li.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
+        function handleInput(e, span) {
+            let text = span.innerText;
             text = text.trim();
-            showSuggestion(li, text);
+            showSuggestion(span, text);
         }
 
-        function showSuggestion(li, currentText) {
+        function showSuggestion(span, currentText) {
             const pattern = flowPatterns[currentText.toLowerCase()];
             if (pattern && !activeSuggestion) {
-                const span = document.createElement('span');
-                span.className = 'suggestion';
-                span.innerText = " \u2193 " + pattern;
-                li.appendChild(span);
+                const sug = document.createElement('span');
+                sug.className = 'suggestion';
+                sug.innerText = " \u2193 " + pattern;
+                span.appendChild(sug);
                 activeSuggestion = pattern;
             } else if (!pattern && activeSuggestion) {
-                const span = li.querySelector('.suggestion');
-                if (span) span.remove();
+                const sug = span.querySelector('.suggestion');
+                if (sug) sug.remove();
                 activeSuggestion = null;
             }
         }
 
-        function acceptSuggestion() {
-            const selection = window.getSelection();
-            const li = selection.rangeCount ? selection.getRangeAt(0).startContainer.parentElement.closest('li') : null;
-            if (!li || !activeSuggestion) return;
-            const span = li.querySelector('.suggestion');
-            if (span) span.remove();
-            const newLi = document.createElement('li');
-            newLi.innerText = activeSuggestion;
-            li.after(newLi);
-            const range = document.createRange();
-            range.selectNodeContents(newLi);
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
+        function acceptSuggestion(span, list) {
+            const sug = span.querySelector('.suggestion');
+            if (sug) sug.remove();
+            
+            const row = span.closest('.activity-row');
+            addActivityRow(list, row, activeSuggestion);
+            
             activeSuggestion = null;
-            autoAssignColor(newLi.innerText.trim());
-            saveList(li.closest('.activity-list'));
+            saveList(list);
         }
 
         function learnPatterns(list) {
-            const items = Array.from(list.querySelectorAll('li')).map(i => i.innerText.trim());
+            const items = Array.from(list.querySelectorAll('.activity-text')).map(i => i.innerText.trim());
             for (let i = 0; i < items.length - 1; i++) {
                 if (items[i] && items[i+1]) {
                     flowPatterns[items[i].toLowerCase()] = items[i+1];
@@ -816,20 +1074,23 @@
         }
 
         function applyColorsToList(list) {
-            const items = list.querySelectorAll('li');
-            items.forEach(li => {
+            const rows = list.querySelectorAll('.activity-row');
+            rows.forEach(row => {
+                const span = row.querySelector('.activity-text');
+                if(!span) return;
                 let text = "";
-                li.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
+                span.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
                 text = text.trim().toLowerCase();
+                
                 if (topicColors[text]) {
                     const bgColor = topicColors[text];
-                    li.style.backgroundColor = bgColor;
-                    li.style.color = getContrastYIQ(bgColor);
-                    li.style.border = '1px solid black';
+                    row.style.backgroundColor = bgColor;
+                    row.style.color = getContrastYIQ(bgColor);
+                    row.style.border = '1px solid black';
                 } else {
-                    li.style.backgroundColor = 'transparent';
-                    li.style.color = 'inherit';
-                    li.style.border = 'none';
+                    row.style.backgroundColor = 'transparent';
+                    row.style.color = 'inherit';
+                    row.style.border = 'none';
                 }
             });
         }
@@ -859,9 +1120,10 @@
             if (e.key === "Escape") {
                 if(copyWeekState !== 'IDLE') cancelCopyWeek();
                 if(document.getElementById('edit-day-modal').style.display === 'block') closeEditModal();
+                if(document.getElementById('magic-plan-modal').style.display === 'block') closeMagicModal();
                 return;
             }
-            if (e.target.contentEditable === "true" || e.target.tagName === 'INPUT') return;
+            if (e.target.contentEditable === "true" || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (e.key === 'ArrowRight') navigateNext();
             if (e.key === 'ArrowLeft') navigatePrev();
             if (e.key.toLowerCase() === 'p') window.print();
