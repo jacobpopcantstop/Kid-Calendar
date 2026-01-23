@@ -716,9 +716,35 @@
             </select>
         </div>
 
+        <div class="modal-row">
+            <button class="btn" onclick="App.storage.importData()" style="background: #2e7d32;">&#128228; Import JSON</button>
+        </div>
+
+        <hr style="margin: 15px 0;">
+
+        <div class="modal-row">
+            <label class="modal-label">Import from Calendar (.ics):</label>
+            <p style="font-size: 11pt; color: #666;">Import events from Google Calendar, Apple Calendar, or Outlook. Export your calendar as .ics first.</p>
+            <input type="file" id="ics-file-input" accept=".ics" style="margin-top: 8px;">
+        </div>
+        <div class="modal-row">
+            <button class="btn" onclick="App.storage.importICS()" style="background: #1976d2;">&#128197; Import .ics File</button>
+        </div>
+
+        <hr style="margin: 15px 0;">
+
+        <div class="modal-row">
+            <label class="modal-label">Clear Events:</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">
+                <button class="btn btn-danger" onclick="App.storage.clearDay()">Today</button>
+                <button class="btn btn-danger" onclick="App.storage.clearWeek()">This Week</button>
+                <button class="btn btn-danger" onclick="App.storage.clearMonth()">This Month</button>
+                <button class="btn btn-danger" onclick="App.storage.clearAll()">All Events</button>
+            </div>
+        </div>
+
         <div class="modal-buttons">
-            <button class="btn btn-danger" onclick="App.storage.closeExportImportModal()">Cancel</button>
-            <button class="btn" onclick="App.storage.importData()" style="background: #2e7d32;">&#128228; Import</button>
+            <button class="btn" onclick="App.storage.closeExportImportModal()" style="background: #616161;">Close</button>
         </div>
     </div>
 
@@ -967,6 +993,7 @@
                 document.getElementById('export-import-modal').style.display = 'none';
                 document.getElementById('overlay').style.display = 'none';
                 document.getElementById('import-file').value = '';
+                document.getElementById('ics-file-input').value = '';
             },
 
             clearData: function() {
@@ -974,6 +1001,129 @@
                     localStorage.clear();
                     location.reload();
                 }
+            },
+
+            clearDay: function() {
+                if (!confirm('Clear all events for today?')) return;
+                const today = new Date().toISOString().split('T')[0];
+                localStorage.removeItem(`list-${today}`);
+                App.render.calendar();
+            },
+
+            clearWeek: function() {
+                if (!confirm('Clear all events for this week?')) return;
+                const start = new Date(App.state.currentWeekStart);
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(start);
+                    d.setDate(start.getDate() + i);
+                    const key = d.toISOString().split('T')[0];
+                    localStorage.removeItem(`list-${key}`);
+                }
+                App.render.calendar();
+            },
+
+            clearMonth: function() {
+                if (!confirm('Clear all events for this month?')) return;
+                const year = App.state.currentYear;
+                const month = App.state.currentMonth;
+                const keys = App.storage.getAllActivityKeys();
+                keys.forEach(key => {
+                    const dateStr = key.replace('list-', '');
+                    const d = new Date(dateStr + 'T12:00:00');
+                    if (d.getFullYear() === year && d.getMonth() === month) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                App.render.calendar();
+            },
+
+            clearAll: function() {
+                if (!confirm('Clear ALL events? This cannot be undone.')) return;
+                const keys = App.storage.getAllActivityKeys();
+                keys.forEach(key => localStorage.removeItem(key));
+                App.render.calendar();
+            },
+
+            importICS: function() {
+                const fileInput = document.getElementById('ics-file-input');
+                if (!fileInput.files.length) {
+                    alert('Please select an .ics file first.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const icsContent = e.target.result;
+                    const events = App.storage.parseICS(icsContent);
+
+                    if (events.length === 0) {
+                        alert('No events found in the file.');
+                        return;
+                    }
+
+                    if (!confirm(`Found ${events.length} events. Import them?`)) return;
+
+                    events.forEach(event => {
+                        const dateKey = event.date;
+                        // Save directly to localStorage
+                        const existing = localStorage.getItem(`list-${dateKey}`) || '';
+                        const timeVal = event.time || '';
+                        const newRow = `<li class="activity-row"><span class="drag-handle no-print">⁞⁞</span><input type="time" class="time-input" value="${timeVal}"${timeVal ? ` data-value="${timeVal}"` : ''}><span class="activity-text" contenteditable="true" data-placeholder="Plan...">${event.text}</span></li>`;
+                        localStorage.setItem(`list-${dateKey}`, existing + newRow);
+                    });
+
+                    App.render.calendar();
+                    App.storage.closeExportImportModal();
+                    alert(`Imported ${events.length} events!`);
+                };
+                reader.readAsText(fileInput.files[0]);
+            },
+
+            parseICS: function(icsContent) {
+                const events = [];
+                const lines = icsContent.split(/\r?\n/);
+                let currentEvent = null;
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i];
+                    // Handle line continuations (lines starting with space or tab)
+                    while (i + 1 < lines.length && (lines[i + 1].startsWith(' ') || lines[i + 1].startsWith('\t'))) {
+                        line += lines[++i].substring(1);
+                    }
+
+                    if (line === 'BEGIN:VEVENT') {
+                        currentEvent = {};
+                    } else if (line === 'END:VEVENT' && currentEvent) {
+                        if (currentEvent.date && currentEvent.summary) {
+                            events.push({
+                                date: currentEvent.date,
+                                time: currentEvent.time || '',
+                                text: currentEvent.summary
+                            });
+                        }
+                        currentEvent = null;
+                    } else if (currentEvent) {
+                        if (line.startsWith('DTSTART')) {
+                            const value = line.split(':').pop();
+                            // Parse YYYYMMDD or YYYYMMDDTHHMMSS format
+                            if (value.length >= 8) {
+                                const year = value.substring(0, 4);
+                                const month = value.substring(4, 6);
+                                const day = value.substring(6, 8);
+                                currentEvent.date = `${year}-${month}-${day}`;
+
+                                if (value.includes('T') && value.length >= 13) {
+                                    const hour = value.substring(9, 11);
+                                    const min = value.substring(11, 13);
+                                    currentEvent.time = `${hour}:${min}`;
+                                }
+                            }
+                        } else if (line.startsWith('SUMMARY:')) {
+                            currentEvent.summary = line.substring(8).replace(/\\,/g, ',').replace(/\\n/g, ' ').replace(/\\;/g, ';');
+                        }
+                    }
+                }
+                return events;
             }
         },
 
@@ -1000,6 +1150,14 @@
                     App.render.weekView(grid, monthHeader);
                     grid.classList.add('weekly-view');
                 }
+
+                // Scroll to today after rendering
+                setTimeout(() => {
+                    const todayCell = document.querySelector('.day-cell.is-today');
+                    if (todayCell) {
+                        todayCell.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }
+                }, 0);
             },
 
             monthView: function(grid, header) {
@@ -1580,7 +1738,15 @@
 
             setupKeyboardShortcuts: function() {
                 document.addEventListener('keydown', (e) => {
+                    // Check for input/textarea FIRST before processing Escape
+                    const isInInput = e.target.contentEditable === "true" || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+
                     if (e.key === "Escape") {
+                        // Don't close modal if user is typing in an input field
+                        if (isInInput) {
+                            e.target.blur(); // Just blur the input instead
+                            return;
+                        }
                         if(App.state.copyWeekState !== 'IDLE') App.events.cancelCopyWeek();
                         if(document.getElementById('edit-day-modal').style.display === 'block') App.events.closeEditModal();
                         if(document.getElementById('magic-plan-modal').style.display === 'block') App.magic.closeModal();
@@ -1590,7 +1756,7 @@
                         if(document.getElementById('recurring-instance-modal').style.display === 'block') App.recurring.closeInstanceModal();
                         return;
                     }
-                    if (e.target.contentEditable === "true" || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    if (isInInput) return;
                     if (e.key === 'ArrowRight') App.events.navigateNext();
                     if (e.key === 'ArrowLeft') App.events.navigatePrev();
                     if (e.key.toLowerCase() === 'p') window.print();
@@ -1927,6 +2093,14 @@
                 document.getElementById('recurring-end').value = '';
                 document.querySelectorAll('#recurring-days-row input').forEach(cb => cb.checked = false);
                 document.getElementById('recurring-preview').style.display = 'none';
+
+                // Setup keydown handlers for time input to prevent form issues
+                const timeInput = document.getElementById('recurring-time');
+                timeInput.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); // Don't trigger any form submission
+                    }
+                };
 
                 // Render existing patterns
                 App.recurring.renderList();
