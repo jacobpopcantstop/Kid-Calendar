@@ -406,7 +406,7 @@
     <!-- Magic Plan Modal -->
     <div id="magic-plan-modal">
         <h3>✨ Magic Plan with Gemini</h3>
-        <p style="font-size: 12pt;">Describe what you want to add. Include days, times, and duration.<br>e.g., "Add Math Club every Monday at 3pm for February"</p>
+        <p style="font-size: 12pt;">Describe what you want to add. Include days, times, and duration.<br>e.g., "Add Math Club every Monday at 3pm"</p>
         <div class="modal-row">
             <textarea id="magic-prompt" class="modal-textarea" placeholder="Type your plan here..."></textarea>
         </div>
@@ -809,8 +809,11 @@
             const loading = document.getElementById('magic-loading');
             loading.style.display = 'inline-block';
 
-            const systemPrompt = `You are a scheduling assistant. The current year is ${currentYear}. 
-            The user will describe activities to add to a calendar. 
+            // Context-aware prompt to ensure dates land in the current view
+            const currentViewDate = new Date(currentYear, currentMonth, 1);
+            const viewName = currentViewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const systemPrompt = `You are a scheduling assistant. The user is planning specifically for ${viewName}. 
             Return a JSON object where keys are dates in 'YYYY-MM-DD' format and values are ARRAYS of objects.
             Each object should have 'time' (HH:MM or empty string) and 'text' (activity description).
             Example: {"2025-02-14": [{"time": "14:00", "text": "Valentine's Party"}], "2025-02-17": [{"time": "", "text": "No School"}]}
@@ -826,7 +829,16 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+
                 const data = await response.json();
+                
+                if (!data.candidates || !data.candidates[0].content) {
+                    throw new Error("No plan generated. Try a different description.");
+                }
+
                 const text = data.candidates[0].content.parts[0].text;
                 let cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
                 
@@ -842,31 +854,49 @@
                 for (const dateKey in schedule) {
                     const items = schedule[dateKey];
                     let newRowsHtml = '';
-                    items.forEach(item => {
-                        // CRITICAL: Update colors logic FIRST
-                        autoAssignColor(item.text); 
-                        
-                        const valAttr = item.time ? `value="${item.time}"` : '';
-                        newRowsHtml += `<li class="activity-row" style="${getStyleForTopic(item.text)}">
-                            <input type="time" class="time-input" ${valAttr}>
-                            <span class="activity-text" contenteditable="true" data-placeholder="Plan...">${item.text}</span>
-                        </li>`;
-                    });
                     
-                    const existing = localStorage.getItem(`list-${dateKey}`) || '';
-                    const div = document.createElement('div');
-                    div.innerHTML = existing;
-                    
-                    // Check if current list is "empty" (just one placeholder row)
-                    const existingRow = div.querySelector('.activity-row');
-                    const existingText = div.querySelector('.activity-text');
-                    
-                    if(existingRow && existingText && existingText.innerText.trim() === '') {
-                         div.innerHTML = newRowsHtml;
-                    } else {
-                         div.innerHTML += newRowsHtml;
+                    if (Array.isArray(items)) {
+                        items.forEach(item => {
+                            let itemText = "";
+                            let itemTime = "";
+
+                            // Handle string vs object format safely
+                            if (typeof item === 'string') {
+                                itemText = item;
+                            } else {
+                                itemText = item.text || "";
+                                itemTime = item.time || "";
+                            }
+
+                            if (!itemText) return;
+
+                            // Update colors logic FIRST
+                            autoAssignColor(itemText); 
+                            
+                            const valAttr = itemTime ? `value="${itemTime}"` : '';
+                            newRowsHtml += `<li class="activity-row" style="${getStyleForTopic(itemText)}">
+                                <input type="time" class="time-input" ${valAttr}>
+                                <span class="activity-text" contenteditable="true" data-placeholder="Plan...">${itemText}</span>
+                            </li>`;
+                        });
                     }
-                    localStorage.setItem(`list-${dateKey}`, div.innerHTML);
+                    
+                    if (newRowsHtml) {
+                        const existing = localStorage.getItem(`list-${dateKey}`) || '';
+                        const div = document.createElement('div');
+                        div.innerHTML = existing;
+                        
+                        // Check if current list is "empty" (just one placeholder row)
+                        const existingRow = div.querySelector('.activity-row');
+                        const existingText = div.querySelector('.activity-text');
+                        
+                        if(existingRow && existingText && existingText.innerText.trim() === '') {
+                             div.innerHTML = newRowsHtml;
+                        } else {
+                             div.innerHTML += newRowsHtml;
+                        }
+                        localStorage.setItem(`list-${dateKey}`, div.innerHTML);
+                    }
                 }
 
                 closeMagicModal();
@@ -875,7 +905,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Error generating plan. Please try again.");
+                alert("Magic Plan Error: " + error.message);
             } finally {
                 loading.style.display = 'none';
             }
