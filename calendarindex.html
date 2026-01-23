@@ -79,6 +79,7 @@
         .btn-danger { background: #8b0000; font-size: 12pt; }
         .btn-action { background: #0056b3; font-size: 12pt; }
         .btn-cancel { background: #555; font-size: 12pt; display: none; }
+        .btn-toggle { background: #551a8b; font-size: 14pt; }
 
         .calendar-title {
             text-align: center;
@@ -125,6 +126,10 @@
             flex-direction: column;
             min-height: 180px;
             background-color: white;
+        }
+        
+        .weekly-view .day-cell {
+            min-height: 70vh; /* Taller cells for weekly view */
         }
 
         /* Hover effect for copy tools */
@@ -227,22 +232,46 @@
             font-size: 14pt;
             margin-bottom: 5px;
         }
+
+        /* Edit Day Modal */
+        #edit-day-modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 5px solid black;
+            padding: 20px;
+            z-index: 1001;
+            min-width: 350px;
+            box-shadow: 10px 10px 0px rgba(0,0,0,0.2);
+        }
+        .modal-row { margin-bottom: 15px; }
+        .modal-label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14pt; }
+        .modal-select, .modal-input { 
+            width: 100%; 
+            padding: 8px; 
+            font-size: 14pt; 
+            border: 2px solid black;
+            font-family: inherit;
+        }
     </style>
 </head>
 <body>
 
     <div class="no-print controls">
-        <button class="btn" onclick="prevMonth()">← Prev</button>
+        <button class="btn" onclick="navigatePrev()">← Prev</button>
         <div style="text-align:center">
             <strong>Ayshe's Semester Planner</strong><br>
             <span style="font-size: 12pt;">
-                Auto-colors on <b>Enter</b>. Use <b>Tab</b> to autocomplete on next line.
+                Auto-colors on <b>Enter</b>. Use <b>Tab</b> to autocomplete.
+                <button class="btn btn-toggle" onclick="toggleView()" id="btn-view-mode">Weekly View</button>
                 <button class="btn btn-action" onclick="startCopyWeekMode()" id="btn-copy-week">Copy Week</button>
                 <button class="btn btn-cancel" onclick="cancelCopyWeek()" id="btn-cancel-week">Cancel</button>
                 <button class="btn btn-danger" onclick="clearData()">Clear Data</button>
             </span>
         </div>
-        <button class="btn" onclick="nextMonth()">Next →</button>
+        <button class="btn" onclick="navigateNext()">Next →</button>
         <button class="btn" onclick="window.print()" style="background: #2e7d32;">Print Landscape</button>
     </div>
 
@@ -256,50 +285,42 @@
         </div>
     </div>
 
+    <!-- Edit Day Modal -->
+    <div id="overlay" class="overlay"></div>
+    <div id="edit-day-modal">
+        <h3>Edit Day Status</h3>
+        <input type="hidden" id="edit-date-key">
+        <div class="modal-row">
+            <label class="modal-label">Day Type:</label>
+            <select id="day-type-select" class="modal-select">
+                <option value="">Normal School Day</option>
+                <option value="no-school">No School (Red)</option>
+                <option value="half-day">Half Day (Yellow)</option>
+                <option value="early-release">Early Release (Blue)</option>
+            </select>
+        </div>
+        <div class="modal-row">
+            <label class="modal-label">Label (e.g. "Holiday"):</label>
+            <input type="text" id="day-label-input" class="modal-input" placeholder="Optional text...">
+        </div>
+        <div style="text-align: right;">
+            <button class="btn btn-danger" onclick="closeEditModal()" style="font-size: 12pt;">Cancel</button>
+            <button class="btn" onclick="saveDayStatus()" style="font-size: 12pt; background: #2e7d32;">Save Changes</button>
+        </div>
+    </div>
+
     <script>
+        // State
         let currentYear = 2025;
         let currentMonth = 1; 
+        let viewMode = 'MONTH'; // 'MONTH' or 'WEEK'
+        let currentWeekStart = new Date(2025, 1, 1); // Tracks the start of the current week viewed
+        
         let topicColors = JSON.parse(localStorage.getItem('ayshe-topic-colors')) || {};
         let flowPatterns = JSON.parse(localStorage.getItem('ayshe-flow-patterns')) || {}; 
-        let pendingTopic = null;
-        let activeSuggestion = null;
-        let randomColorIndex = Object.keys(topicColors).length; // Start rotation based on existing count
         
-        // Copy/Paste State
-        let clipboardDay = null;
-        let copyWeekState = 'IDLE'; // IDLE, SOURCE, TARGET
-        let copyWeekSourceDate = null;
-
-        // Smart Presets
-        const PRESET_COLORS = {
-            "math": "#a0c4ff",       // Light Blue
-            "mathematics": "#a0c4ff",
-            "science": "#9bf6ff",    // Cyan/Aqua
-            "biology": "#9bf6ff",
-            "chemistry": "#9bf6ff",
-            "english": "#ffc6ff",    // Pink
-            "reading": "#ffc6ff",
-            "writing": "#ffc6ff",
-            "history": "#fdffb6",    // Yellow
-            "social studies": "#fdffb6",
-            "art": "#bdb2ff",        // Purple
-            "music": "#bdb2ff",
-            "pe": "#caffbf",         // Green
-            "gym": "#caffbf",
-            "lunch": "#ffd6a5",      // Orange
-            "break": "#e5e5e5",      // Grey
-            "study": "#ffadad",      // Salmon
-            "speech": "#ffc4d6",     // Rose
-            "therapy": "#ffc4d6"
-        };
-
-        const DISTINCT_PALETTE = [
-            "#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", 
-            "#a0c4ff", "#bdb2ff", "#ffc6ff", "#fffffc", "#d4a373",
-            "#b5e48c", "#caf0f8", "#e2ece9", "#f0efeb", "#dee2e6"
-        ];
-
-        const schoolEvents = {
+        // Merge default events with custom user events
+        const defaultEvents = {
             "2025-02-05": { type: "early-release", text: "Early Release (2:30)" },
             "2025-02-13": { type: "no-school", text: "Holiday" },
             "2025-02-16": { type: "no-school", text: "Holiday" },
@@ -327,17 +348,104 @@
             "2025-06-04": { type: "early-release", text: "Early Release (2:30)" },
             "2025-06-10": { type: "half-day", text: "Last Day!" }
         };
+        
+        // Load custom events overlay
+        let customEvents = JSON.parse(localStorage.getItem('ayshe-custom-events')) || {};
+        
+        // Helper to get effective event for a date
+        function getEvent(dateKey) {
+            return customEvents[dateKey] || defaultEvents[dateKey];
+        }
+
+        let pendingTopic = null;
+        let activeSuggestion = null;
+        let randomColorIndex = Object.keys(topicColors).length;
+        
+        // Copy/Paste State
+        let clipboardDay = null;
+        let copyWeekState = 'IDLE'; 
+        let copyWeekSourceDate = null;
+
+        // Smart Presets
+        const PRESET_COLORS = {
+            "math": "#a0c4ff", "mathematics": "#a0c4ff",
+            "science": "#9bf6ff", "biology": "#9bf6ff", "chemistry": "#9bf6ff",
+            "english": "#ffc6ff", "reading": "#ffc6ff", "writing": "#ffc6ff",
+            "history": "#fdffb6", "social studies": "#fdffb6",
+            "art": "#bdb2ff", "music": "#bdb2ff",
+            "pe": "#caffbf", "gym": "#caffbf",
+            "lunch": "#ffd6a5", "break": "#e5e5e5",
+            "study": "#ffadad", "speech": "#ffc4d6", "therapy": "#ffc4d6"
+        };
+
+        const DISTINCT_PALETTE = [
+            "#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", 
+            "#a0c4ff", "#bdb2ff", "#ffc6ff", "#fffffc", "#d4a373",
+            "#b5e48c", "#caf0f8", "#e2ece9", "#f0efeb", "#dee2e6"
+        ];
 
         const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        // --- NAVIGATION & VIEW LOGIC ---
+
+        function toggleView() {
+            if (viewMode === 'MONTH') {
+                viewMode = 'WEEK';
+                document.getElementById('btn-view-mode').innerText = "Monthly View";
+                // Set current week start based on current month/date
+                const today = new Date();
+                if(today.getFullYear() === currentYear && today.getMonth() === currentMonth) {
+                    currentWeekStart = new Date(today);
+                } else {
+                    currentWeekStart = new Date(currentYear, currentMonth, 1);
+                }
+                // Align to Sunday
+                currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+            } else {
+                viewMode = 'MONTH';
+                document.getElementById('btn-view-mode').innerText = "Weekly View";
+                // Sync month view to the week we were looking at
+                currentMonth = currentWeekStart.getMonth();
+                currentYear = currentWeekStart.getFullYear();
+            }
+            renderCalendar();
+        }
+
+        function navigateNext() {
+            if (viewMode === 'MONTH') {
+                currentMonth++; 
+                if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            } else {
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+                // Update month/year header based on week center
+                const midWeek = new Date(currentWeekStart);
+                midWeek.setDate(midWeek.getDate() + 3);
+                currentMonth = midWeek.getMonth();
+                currentYear = midWeek.getFullYear();
+            }
+            renderCalendar();
+        }
+
+        function navigatePrev() {
+            if (viewMode === 'MONTH') {
+                currentMonth--; 
+                if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            } else {
+                currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+                const midWeek = new Date(currentWeekStart);
+                midWeek.setDate(midWeek.getDate() + 3);
+                currentMonth = midWeek.getMonth();
+                currentYear = midWeek.getFullYear();
+            }
+            renderCalendar();
+        }
 
         function renderCalendar() {
             const grid = document.getElementById('calendar-grid');
             const monthHeader = document.getElementById('month-name');
             grid.innerHTML = '';
-
-            const date = new Date(currentYear, currentMonth, 1);
-            monthHeader.innerText = `${date.toLocaleString('default', { month: 'long' })} ${currentYear}`;
-
+            
+            // Render Headers
             weekdays.forEach(day => {
                 const div = document.createElement('div');
                 div.className = 'weekday';
@@ -345,49 +453,103 @@
                 grid.appendChild(div);
             });
 
+            if (viewMode === 'MONTH') {
+                renderMonthView(grid, monthHeader);
+                grid.classList.remove('weekly-view');
+            } else {
+                renderWeekView(grid, monthHeader);
+                grid.classList.add('weekly-view');
+            }
+        }
+
+        function renderMonthView(grid, header) {
+            const date = new Date(currentYear, currentMonth, 1);
+            header.innerText = `${date.toLocaleString('default', { month: 'long' })} ${currentYear}`;
+
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
             const prevLastDay = new Date(currentYear, currentMonth, 0).getDate();
 
-            for (let i = firstDay; i > 0; i--) grid.appendChild(createCell(prevLastDay - i + 1, false));
+            for (let i = firstDay; i > 0; i--) grid.appendChild(createCell(prevLastDay - i + 1, false, -1));
             for (let i = 1; i <= lastDay; i++) grid.appendChild(createCell(i, true));
         }
 
-        function createCell(day, isCurrentMonth) {
+        function renderWeekView(grid, header) {
+            // Calculate end of week for display
+            const weekEnd = new Date(currentWeekStart);
+            weekEnd.setDate(currentWeekStart.getDate() + 6);
+            
+            header.innerText = `Week of ${currentWeekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
+
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(currentWeekStart);
+                d.setDate(currentWeekStart.getDate() + i);
+                // Create cell passing full date object
+                grid.appendChild(createCellFromDate(d));
+            }
+        }
+
+        function createCellFromDate(dateObj) {
+            return createCell(dateObj.getDate(), true, 0, dateObj);
+        }
+
+        // Modified createCell to handle date objects or month-relative logic
+        function createCell(day, isCurrent, offsetMonth = 0, specificDate = null) {
             const cell = document.createElement('div');
             cell.className = 'day-cell';
-            if (!isCurrentMonth) cell.classList.add('not-current-month');
+            
+            let dateObj;
+            if (specificDate) {
+                dateObj = specificDate;
+            } else {
+                // Month view logic
+                let targetMonth = currentMonth;
+                let targetYear = currentYear;
+                if (offsetMonth === -1) { // Prev month padding
+                    targetMonth--;
+                    if (targetMonth < 0) { targetMonth = 11; targetYear--; }
+                }
+                dateObj = new Date(targetYear, targetMonth, day);
+            }
+
+            // In month view, grey out non-current month days
+            if (viewMode === 'MONTH' && !isCurrent) {
+                cell.classList.add('not-current-month');
+            }
+            // In Month View, disable editing/saving for grey days to keep it simple, 
+            // OR allow it but ensure dateKey is correct (which it is now)
+
+            const dateKey = dateObj.toISOString().split('T')[0];
+            cell.dataset.dateKey = dateKey; 
             
             cell.innerHTML = `<div class="day-number">${day}</div>`;
 
-            // Tools (Copy/Paste)
-            if (isCurrentMonth) {
-                const tools = document.createElement('div');
-                tools.className = 'cell-tools no-print';
-                tools.innerHTML = `
-                    <button class="tool-btn" title="Copy Day" onclick="copyDay(this)">📄</button>
-                    <button class="tool-btn" title="Paste Day" onclick="pasteDay(this)">📋</button>
-                `;
-                cell.appendChild(tools);
-            }
-            
-            if (!isCurrentMonth) return cell;
-
-            const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            cell.dataset.dateKey = dateKey; // Helper for week copy
+            // Tools (Copy/Paste/Edit)
+            const tools = document.createElement('div');
+            tools.className = 'cell-tools no-print';
+            tools.innerHTML = `
+                <button class="tool-btn" title="Edit Day Status" onclick="openEditModal('${dateKey}')">⚙️</button>
+                <button class="tool-btn" title="Copy Day" onclick="copyDay(this)">📄</button>
+                <button class="tool-btn" title="Paste Day" onclick="pasteDay(this)">📋</button>
+            `;
+            cell.appendChild(tools);
 
             // Check if Today
             const today = new Date();
-            if (today.getFullYear() === currentYear && today.getMonth() === currentMonth && today.getDate() === day) {
+            if (today.toDateString() === dateObj.toDateString()) {
                 cell.classList.add('is-today');
             }
 
-            if (schoolEvents[dateKey]) {
-                cell.classList.add(`type-${schoolEvents[dateKey].type}`);
-                const label = document.createElement('div');
-                label.className = 'event-label';
-                label.innerText = schoolEvents[dateKey].text;
-                cell.appendChild(label);
+            // Check Event Type (Merged Default + Custom)
+            const eventData = getEvent(dateKey);
+            if (eventData) {
+                cell.classList.add(`type-${eventData.type}`);
+                if (eventData.text) {
+                    const label = document.createElement('div');
+                    label.className = 'event-label';
+                    label.innerText = eventData.text;
+                    cell.appendChild(label);
+                }
             }
 
             const list = document.createElement('ul');
@@ -411,51 +573,27 @@
                 list.innerHTML = '<li></li>';
             }
 
-            list.oninput = (e) => {
-                saveList(list);
-                handleInput(e);
-            };
-
+            list.oninput = (e) => { saveList(list); handleInput(e); };
             list.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const text = (e.clipboardData || window.clipboardData).getData('text');
                 document.execCommand('insertText', false, text);
             });
-
             list.onblur = () => {
                 const items = list.querySelectorAll('li');
                 let changed = false;
-                items.forEach(li => {
-                    if (li.innerText.trim() === '') {
-                        li.remove();
-                        changed = true;
-                    }
-                });
-                if (list.innerHTML.trim() === '') {
-                     list.innerHTML = '<li></li>';
-                     changed = true;
-                }
+                items.forEach(li => { if (li.innerText.trim() === '') { li.remove(); changed = true; } });
+                if (list.innerHTML.trim() === '') { list.innerHTML = '<li></li>'; changed = true; }
                 if(changed) saveList(list);
             };
-
             list.onkeydown = (e) => {
-                if (e.key === 'Tab' && activeSuggestion) {
-                    e.preventDefault();
-                    acceptSuggestion();
-                }
+                if (e.key === 'Tab' && activeSuggestion) { e.preventDefault(); acceptSuggestion(); }
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     const selection = window.getSelection();
-                    let currentLi = null;
-                    if(selection.rangeCount > 0) {
-                        currentLi = selection.getRangeAt(0).startContainer.parentElement.closest('li');
-                    }
+                    let currentLi = selection.rangeCount > 0 ? selection.getRangeAt(0).startContainer.parentElement.closest('li') : null;
                     const newLi = document.createElement('li');
-                    if (currentLi) {
-                        currentLi.after(newLi);
-                    } else {
-                        list.appendChild(newLi);
-                    }
+                    if (currentLi) currentLi.after(newLi); else list.appendChild(newLi);
                     const range = document.createRange();
                     range.selectNodeContents(newLi);
                     range.collapse(false);
@@ -464,16 +602,10 @@
                     learnPatterns(list);
                     saveList(list);
                     if(currentLi) {
-                        // Extract text ignoring suggestion span
                         let text = "";
-                        currentLi.childNodes.forEach(node => {
-                            if (node.nodeType === 3) text += node.textContent;
-                        });
+                        currentLi.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
                         text = text.trim();
-                        
-                        if (text.length > 1 && !topicColors[text.toLowerCase()]) {
-                             autoAssignColor(text);
-                        }
+                        if (text.length > 1 && !topicColors[text.toLowerCase()]) autoAssignColor(text);
                     }
                 }
             };
@@ -482,13 +614,54 @@
             return cell;
         }
 
+        // --- EDIT DAY STATUS LOGIC ---
+        
+        function openEditModal(dateKey) {
+            const modal = document.getElementById('edit-day-modal');
+            const overlay = document.getElementById('overlay');
+            const dateInput = document.getElementById('edit-date-key');
+            const typeSelect = document.getElementById('day-type-select');
+            const labelInput = document.getElementById('day-label-input');
+
+            // Load current data
+            const eventData = getEvent(dateKey);
+            
+            dateInput.value = dateKey;
+            typeSelect.value = eventData ? eventData.type : "";
+            labelInput.value = eventData ? eventData.text : "";
+
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-day-modal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        function saveDayStatus() {
+            const dateKey = document.getElementById('edit-date-key').value;
+            const type = document.getElementById('day-type-select').value;
+            const text = document.getElementById('day-label-input').value;
+
+            if (type === "" && text === "") {
+                // Determine if we are deleting an override or just saving blank
+                delete customEvents[dateKey];
+            } else {
+                customEvents[dateKey] = { type: type, text: text };
+            }
+
+            localStorage.setItem('ayshe-custom-events', JSON.stringify(customEvents));
+            closeEditModal();
+            renderCalendar();
+        }
+
         // --- COPY / PASTE LOGIC ---
 
         function copyDay(btn) {
             const list = btn.closest('.day-cell').querySelector('.activity-list');
             if (list) {
                 clipboardDay = list.innerHTML;
-                // Visual feedback
                 const origText = btn.innerHTML;
                 btn.innerHTML = '✅';
                 setTimeout(() => btn.innerHTML = origText, 1000);
@@ -522,14 +695,12 @@
             document.getElementById('status-bar').style.display = 'none';
             document.getElementById('btn-copy-week').style.display = 'inline-block';
             document.getElementById('btn-cancel-week').style.display = 'none';
-            renderCalendar(); // clear highlights
+            renderCalendar();
         }
 
         function handleWeekCopyClick(dateKey) {
-            const clickedDate = new Date(dateKey);
-            
-            // Calculate Start of Week (Sunday)
-            const dayOfWeek = clickedDate.getDay(); // 0 (Sun) - 6 (Sat)
+            const clickedDate = new Date(dateKey + "T12:00:00"); // Avoid timezone issues
+            const dayOfWeek = clickedDate.getDay(); 
             const weekStart = new Date(clickedDate);
             weekStart.setDate(clickedDate.getDate() - dayOfWeek);
 
@@ -548,42 +719,28 @@
         function highlightWeek(startDate, isSource) {
             const grid = document.getElementById('calendar-grid');
             const cells = grid.querySelectorAll('.day-cell');
-            
             const datesInWeek = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(startDate);
                 d.setDate(startDate.getDate() + i);
                 datesInWeek.push(d.toISOString().split('T')[0]);
             }
-
             cells.forEach(cell => {
-                if (datesInWeek.includes(cell.dataset.dateKey)) {
-                    cell.classList.add('is-week-select');
-                }
+                if (datesInWeek.includes(cell.dataset.dateKey)) cell.classList.add('is-week-select');
             });
         }
 
         function performWeekCopy(sourceStart, targetStart) {
             for (let i = 0; i < 7; i++) {
-                // Source
-                const sDate = new Date(sourceStart);
-                sDate.setDate(sourceStart.getDate() + i);
+                const sDate = new Date(sourceStart); sDate.setDate(sourceStart.getDate() + i);
                 const sKey = sDate.toISOString().split('T')[0];
-
-                // Target
-                const tDate = new Date(targetStart);
-                tDate.setDate(targetStart.getDate() + i);
+                const tDate = new Date(targetStart); tDate.setDate(targetStart.getDate() + i);
                 const tKey = tDate.toISOString().split('T')[0];
-
-                // Get Data
                 const sourceData = localStorage.getItem(`list-${sKey}`);
-                if (sourceData) {
-                    localStorage.setItem(`list-${tKey}`, sourceData);
-                }
+                if (sourceData) localStorage.setItem(`list-${tKey}`, sourceData);
             }
             renderCalendar();
         }
-
 
         // --- GENERIC LOGIC ---
 
@@ -598,14 +755,9 @@
             if (!selection.rangeCount) return;
             const li = selection.getRangeAt(0).startContainer.parentElement.closest('li');
             if (!li) return;
-            
-            // Safe Text Extraction
             let text = "";
-            li.childNodes.forEach(node => {
-                if (node.nodeType === 3) text += node.textContent;
-            });
+            li.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
             text = text.trim();
-            
             showSuggestion(li, text);
         }
 
@@ -614,7 +766,7 @@
             if (pattern && !activeSuggestion) {
                 const span = document.createElement('span');
                 span.className = 'suggestion';
-                span.innerText = " \u2193 " + pattern; // Down arrow + pattern
+                span.innerText = " \u2193 " + pattern;
                 li.appendChild(span);
                 activeSuggestion = pattern;
             } else if (!pattern && activeSuggestion) {
@@ -628,27 +780,18 @@
             const selection = window.getSelection();
             const li = selection.rangeCount ? selection.getRangeAt(0).startContainer.parentElement.closest('li') : null;
             if (!li || !activeSuggestion) return;
-            
             const span = li.querySelector('.suggestion');
             if (span) span.remove();
-            
-            // Create New Line BELOW
             const newLi = document.createElement('li');
             newLi.innerText = activeSuggestion;
             li.after(newLi);
-            
-            // Focus New Line
             const range = document.createRange();
             range.selectNodeContents(newLi);
             range.collapse(false);
             selection.removeAllRanges();
             selection.addRange(range);
-            
             activeSuggestion = null;
-            
-            // Check Color for new line
             autoAssignColor(newLi.innerText.trim());
-            
             saveList(li.closest('.activity-list'));
         }
 
@@ -675,13 +818,9 @@
         function applyColorsToList(list) {
             const items = list.querySelectorAll('li');
             items.forEach(li => {
-                // Extract clean text to apply color
                 let text = "";
-                li.childNodes.forEach(node => {
-                    if (node.nodeType === 3) text += node.textContent;
-                });
+                li.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
                 text = text.trim().toLowerCase();
-                
                 if (topicColors[text]) {
                     const bgColor = topicColors[text];
                     li.style.backgroundColor = bgColor;
@@ -698,19 +837,14 @@
         function autoAssignColor(topic) {
             const lowerTopic = topic.toLowerCase();
             let selectedColor;
-            
             if (PRESET_COLORS[lowerTopic]) {
                 selectedColor = PRESET_COLORS[lowerTopic];
             } else {
                 selectedColor = DISTINCT_PALETTE[randomColorIndex % DISTINCT_PALETTE.length];
                 randomColorIndex++; 
             }
-            
-            // Save
             topicColors[lowerTopic] = selectedColor;
             localStorage.setItem('ayshe-topic-colors', JSON.stringify(topicColors));
-            
-            // Update UI (Efficiently, without destroying DOM/Focus)
             document.querySelectorAll('.activity-list').forEach(list => applyColorsToList(list));
         }
 
@@ -721,19 +855,15 @@
             }
         }
 
-        function nextMonth() { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } renderCalendar(); }
-        function prevMonth() { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); }
-
         document.addEventListener('keydown', (e) => {
-            // Escape key cancels week copy mode
-            if (e.key === "Escape" && copyWeekState !== 'IDLE') {
-                cancelCopyWeek();
+            if (e.key === "Escape") {
+                if(copyWeekState !== 'IDLE') cancelCopyWeek();
+                if(document.getElementById('edit-day-modal').style.display === 'block') closeEditModal();
                 return;
             }
-
-            if (e.target.contentEditable === "true") return;
-            if (e.key === 'ArrowRight') nextMonth();
-            if (e.key === 'ArrowLeft') prevMonth();
+            if (e.target.contentEditable === "true" || e.target.tagName === 'INPUT') return;
+            if (e.key === 'ArrowRight') navigateNext();
+            if (e.key === 'ArrowLeft') navigatePrev();
             if (e.key.toLowerCase() === 'p') window.print();
         });
 
