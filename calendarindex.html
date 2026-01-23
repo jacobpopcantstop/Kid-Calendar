@@ -123,16 +123,6 @@
         .btn-toggle { background: #512da8; }
         .btn-print { background: #2e7d32; }
 
-        .calendar-title-display {
-            text-align: center;
-            font-size: 28pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            flex-shrink: 0;
-            display: none; /* Hidden in app view, shown in print via JS or CSS logic if needed, but we keep month name in grid header usually */
-        }
-        
         #month-name {
             text-align: center;
             font-size: 24pt;
@@ -356,7 +346,6 @@
                 <div class="app-title">Ayshe's Semester Planner</div>
                 <div class="app-subtitle">Auto-colors on Enter • Use Tab to autocomplete</div>
             </div>
-            <!-- Status Bar embedded in header if active, or keep separate. Keeping separate for visibility -->
         </div>
 
         <div class="toolbar">
@@ -839,25 +828,40 @@
 
                 const data = await response.json();
                 const text = data.candidates[0].content.parts[0].text;
-                const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                let cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                
+                // Extra safety for JSON parsing
+                const firstBrace = cleanJson.indexOf('{');
+                const lastBrace = cleanJson.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1) {
+                    cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+                }
+                
                 const schedule = JSON.parse(cleanJson);
 
                 for (const dateKey in schedule) {
                     const items = schedule[dateKey];
                     let newRowsHtml = '';
                     items.forEach(item => {
+                        // CRITICAL: Update colors logic FIRST
+                        autoAssignColor(item.text); 
+                        
                         const valAttr = item.time ? `value="${item.time}"` : '';
                         newRowsHtml += `<li class="activity-row" style="${getStyleForTopic(item.text)}">
                             <input type="time" class="time-input" ${valAttr}>
                             <span class="activity-text" contenteditable="true" data-placeholder="Plan...">${item.text}</span>
                         </li>`;
-                        autoAssignColor(item.text); 
                     });
                     
                     const existing = localStorage.getItem(`list-${dateKey}`) || '';
                     const div = document.createElement('div');
                     div.innerHTML = existing;
-                    if(div.querySelector('.activity-row') && div.querySelector('.activity-text').innerText === '') {
+                    
+                    // Check if current list is "empty" (just one placeholder row)
+                    const existingRow = div.querySelector('.activity-row');
+                    const existingText = div.querySelector('.activity-text');
+                    
+                    if(existingRow && existingText && existingText.innerText.trim() === '') {
                          div.innerHTML = newRowsHtml;
                     } else {
                          div.innerHTML += newRowsHtml;
