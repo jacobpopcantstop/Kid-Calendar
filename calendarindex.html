@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayshe's Semester Planner</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --border-color: #000000;
+            --no-school: #ffcccc;
+            --half-day: #fff4cc;
+            --early-release: #cce5ff;
+            --today-highlight: #ffeb3b;
+            --font-size: 20pt;
+            --selection-highlight: #b3d9ff;
+        }
+
+        @page {
+            size: landscape;
+            margin: 0.5cm;
+        }
+
+        body {
+            font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+            font-size: var(--font-size);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; 
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            .cell-tools { display: none !important; }
+            body { padding: 0; height: auto; overflow: visible; }
+            .calendar-grid-wrapper { overflow: visible !important; height: auto !important; }
+            .day-cell { min-height: 150px !important; }
+            .is-today { border: 4px solid black !important; } 
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            background: #f0f0f0;
+            padding: 10px;
+            border: 3px solid black;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            background: black;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            font-size: 16pt;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+        
+        .btn-danger { background: #8b0000; font-size: 12pt; }
+        .btn-action { background: #0056b3; font-size: 12pt; }
+        .btn-cancel { background: #555; font-size: 12pt; display: none; }
+
+        .calendar-title {
+            text-align: center;
+            font-size: 28pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            flex-shrink: 0;
+        }
+
+        .calendar-grid-wrapper {
+            flex-grow: 1;
+            overflow-y: auto;
+            border-top: 4px solid black;
+            border-left: 4px solid black;
+            background: white;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            width: 100%;
+        }
+
+        .weekday {
+            background: #eee;
+            text-align: center;
+            font-weight: bold;
+            border-right: 4px solid black;
+            border-bottom: 4px solid black;
+            padding: 5px 0;
+            font-size: 18pt;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .day-cell {
+            border-right: 4px solid black;
+            border-bottom: 4px solid black;
+            padding: 5px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 180px;
+            background-color: white;
+        }
+
+        /* Hover effect for copy tools */
+        .day-cell:hover .cell-tools {
+            display: flex;
+        }
+
+        .cell-tools {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            display: none;
+            gap: 2px;
+            z-index: 5;
+        }
+
+        .tool-btn {
+            background: #fff;
+            border: 2px solid black;
+            border-radius: 4px;
+            font-size: 12pt;
+            cursor: pointer;
+            padding: 2px 5px;
+            font-weight: bold;
+        }
+        .tool-btn:hover { background: #eee; }
+
+        .day-number {
+            font-weight: bold;
+            font-size: 18pt;
+            margin-bottom: 2px;
+        }
+
+        .is-today {
+            background-color: #fffff0;
+            box-shadow: inset 0 0 0 4px var(--today-highlight);
+        }
+
+        .is-week-select {
+            background-color: var(--selection-highlight) !important;
+        }
+
+        .not-current-month {
+            background-color: #e0e0e0;
+            opacity: 0.5;
+        }
+
+        .event-label {
+            font-size: 12pt;
+            font-weight: bold;
+            padding: 1px 4px;
+            margin-bottom: 4px;
+            border: 2px solid black;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .activity-list {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 16pt;
+            flex-grow: 1;
+            outline: none;
+            list-style-type: disc;
+        }
+
+        .activity-list li {
+            margin-bottom: 6px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .activity-list:empty:before {
+            content: attr(data-placeholder);
+            color: #aaa;
+            font-style: italic;
+            pointer-events: none;
+        }
+
+        .suggestion {
+            color: #999;
+            pointer-events: none;
+            user-select: none;
+            font-style: italic;
+        }
+
+        .type-no-school { background-color: var(--no-school) !important; }
+        .type-half-day { background-color: var(--half-day) !important; }
+        .type-early-release { background-color: var(--early-release) !important; }
+        
+        /* Status bar for copy week mode */
+        #status-bar {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            text-align: center;
+            border: 2px solid #ffeeba;
+            display: none;
+            font-size: 14pt;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print controls">
+        <button class="btn" onclick="prevMonth()">← Prev</button>
+        <div style="text-align:center">
+            <strong>Ayshe's Semester Planner</strong><br>
+            <span style="font-size: 12pt;">
+                Auto-colors on <b>Enter</b>. Use <b>Tab</b> to autocomplete on next line.
+                <button class="btn btn-action" onclick="startCopyWeekMode()" id="btn-copy-week">Copy Week</button>
+                <button class="btn btn-cancel" onclick="cancelCopyWeek()" id="btn-cancel-week">Cancel</button>
+                <button class="btn btn-danger" onclick="clearData()">Clear Data</button>
+            </span>
+        </div>
+        <button class="btn" onclick="nextMonth()">Next →</button>
+        <button class="btn" onclick="window.print()" style="background: #2e7d32;">Print Landscape</button>
+    </div>
+
+    <div id="status-bar">Select a day in the week you want to COPY FROM...</div>
+
+    <div class="calendar-title" id="month-name">Month Year</div>
+    
+    <div class="calendar-grid-wrapper">
+        <div class="calendar-grid" id="calendar-grid">
+            <!-- JS Populated -->
+        </div>
+    </div>
+
+    <script>
+        let currentYear = 2025;
+        let currentMonth = 1; 
+        let topicColors = JSON.parse(localStorage.getItem('ayshe-topic-colors')) || {};
+        let flowPatterns = JSON.parse(localStorage.getItem('ayshe-flow-patterns')) || {}; 
+        let pendingTopic = null;
+        let activeSuggestion = null;
+        let randomColorIndex = Object.keys(topicColors).length; // Start rotation based on existing count
+        
+        // Copy/Paste State
+        let clipboardDay = null;
+        let copyWeekState = 'IDLE'; // IDLE, SOURCE, TARGET
+        let copyWeekSourceDate = null;
+
+        // Smart Presets
+        const PRESET_COLORS = {
+            "math": "#a0c4ff",       // Light Blue
+            "mathematics": "#a0c4ff",
+            "science": "#9bf6ff",    // Cyan/Aqua
+            "biology": "#9bf6ff",
+            "chemistry": "#9bf6ff",
+            "english": "#ffc6ff",    // Pink
+            "reading": "#ffc6ff",
+            "writing": "#ffc6ff",
+            "history": "#fdffb6",    // Yellow
+            "social studies": "#fdffb6",
+            "art": "#bdb2ff",        // Purple
+            "music": "#bdb2ff",
+            "pe": "#caffbf",         // Green
+            "gym": "#caffbf",
+            "lunch": "#ffd6a5",      // Orange
+            "break": "#e5e5e5",      // Grey
+            "study": "#ffadad",      // Salmon
+            "speech": "#ffc4d6",     // Rose
+            "therapy": "#ffc4d6"
+        };
+
+        const DISTINCT_PALETTE = [
+            "#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", 
+            "#a0c4ff", "#bdb2ff", "#ffc6ff", "#fffffc", "#d4a373",
+            "#b5e48c", "#caf0f8", "#e2ece9", "#f0efeb", "#dee2e6"
+        ];
+
+        const schoolEvents = {
+            "2025-02-05": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-02-13": { type: "no-school", text: "Holiday" },
+            "2025-02-16": { type: "no-school", text: "Holiday" },
+            "2025-02-19": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-03-03": { type: "half-day", text: "Half Day" },
+            "2025-03-04": { type: "half-day", text: "Half Day" },
+            "2025-03-05": { type: "half-day", text: "Half Day" },
+            "2025-03-06": { type: "no-school", text: "Staff Day" },
+            "2025-03-19": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-03-27": { type: "half-day", text: "Half Day" },
+            "2025-03-30": { type: "no-school", text: "Spring Break" },
+            "2025-03-31": { type: "no-school", text: "Spring Break" },
+            "2025-04-01": { type: "no-school", text: "Spring Break" },
+            "2025-04-02": { type: "no-school", text: "Spring Break" },
+            "2025-04-03": { type: "no-school", text: "Spring Break" },
+            "2025-04-04": { type: "no-school", text: "Spring Break" },
+            "2025-04-05": { type: "no-school", text: "Easter" },
+            "2025-04-13": { type: "no-school", text: "Staff Day" },
+            "2025-04-16": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-04-30": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-05-07": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-05-08": { type: "no-school", text: "Snow Day" },
+            "2025-05-21": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-05-26": { type: "no-school", text: "Memorial Day" },
+            "2025-06-04": { type: "early-release", text: "Early Release (2:30)" },
+            "2025-06-10": { type: "half-day", text: "Last Day!" }
+        };
+
+        const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const monthHeader = document.getElementById('month-name');
+            grid.innerHTML = '';
+
+            const date = new Date(currentYear, currentMonth, 1);
+            monthHeader.innerText = `${date.toLocaleString('default', { month: 'long' })} ${currentYear}`;
+
+            weekdays.forEach(day => {
+                const div = document.createElement('div');
+                div.className = 'weekday';
+                div.innerText = day;
+                grid.appendChild(div);
+            });
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const prevLastDay = new Date(currentYear, currentMonth, 0).getDate();
+
+            for (let i = firstDay; i > 0; i--) grid.appendChild(createCell(prevLastDay - i + 1, false));
+            for (let i = 1; i <= lastDay; i++) grid.appendChild(createCell(i, true));
+        }
+
+        function createCell(day, isCurrentMonth) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+            if (!isCurrentMonth) cell.classList.add('not-current-month');
+            
+            cell.innerHTML = `<div class="day-number">${day}</div>`;
+
+            // Tools (Copy/Paste)
+            if (isCurrentMonth) {
+                const tools = document.createElement('div');
+                tools.className = 'cell-tools no-print';
+                tools.innerHTML = `
+                    <button class="tool-btn" title="Copy Day" onclick="copyDay(this)">📄</button>
+                    <button class="tool-btn" title="Paste Day" onclick="pasteDay(this)">📋</button>
+                `;
+                cell.appendChild(tools);
+            }
+            
+            if (!isCurrentMonth) return cell;
+
+            const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            cell.dataset.dateKey = dateKey; // Helper for week copy
+
+            // Check if Today
+            const today = new Date();
+            if (today.getFullYear() === currentYear && today.getMonth() === currentMonth && today.getDate() === day) {
+                cell.classList.add('is-today');
+            }
+
+            if (schoolEvents[dateKey]) {
+                cell.classList.add(`type-${schoolEvents[dateKey].type}`);
+                const label = document.createElement('div');
+                label.className = 'event-label';
+                label.innerText = schoolEvents[dateKey].text;
+                cell.appendChild(label);
+            }
+
+            const list = document.createElement('ul');
+            list.className = 'activity-list';
+            list.contentEditable = true;
+            list.dataset.date = dateKey;
+            list.setAttribute('data-placeholder', 'Click to plan...'); 
+
+            // Week Copy Click Handler
+            cell.onclick = (e) => {
+                if (copyWeekState !== 'IDLE' && !e.target.closest('button')) {
+                    handleWeekCopyClick(dateKey);
+                }
+            };
+
+            const savedData = localStorage.getItem(`list-${dateKey}`);
+            if (savedData) {
+                list.innerHTML = savedData;
+                applyColorsToList(list);
+            } else {
+                list.innerHTML = '<li></li>';
+            }
+
+            list.oninput = (e) => {
+                saveList(list);
+                handleInput(e);
+            };
+
+            list.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                document.execCommand('insertText', false, text);
+            });
+
+            list.onblur = () => {
+                const items = list.querySelectorAll('li');
+                let changed = false;
+                items.forEach(li => {
+                    if (li.innerText.trim() === '') {
+                        li.remove();
+                        changed = true;
+                    }
+                });
+                if (list.innerHTML.trim() === '') {
+                     list.innerHTML = '<li></li>';
+                     changed = true;
+                }
+                if(changed) saveList(list);
+            };
+
+            list.onkeydown = (e) => {
+                if (e.key === 'Tab' && activeSuggestion) {
+                    e.preventDefault();
+                    acceptSuggestion();
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const selection = window.getSelection();
+                    let currentLi = null;
+                    if(selection.rangeCount > 0) {
+                        currentLi = selection.getRangeAt(0).startContainer.parentElement.closest('li');
+                    }
+                    const newLi = document.createElement('li');
+                    if (currentLi) {
+                        currentLi.after(newLi);
+                    } else {
+                        list.appendChild(newLi);
+                    }
+                    const range = document.createRange();
+                    range.selectNodeContents(newLi);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    learnPatterns(list);
+                    saveList(list);
+                    if(currentLi) {
+                        // Extract text ignoring suggestion span
+                        let text = "";
+                        currentLi.childNodes.forEach(node => {
+                            if (node.nodeType === 3) text += node.textContent;
+                        });
+                        text = text.trim();
+                        
+                        if (text.length > 1 && !topicColors[text.toLowerCase()]) {
+                             autoAssignColor(text);
+                        }
+                    }
+                }
+            };
+
+            cell.appendChild(list);
+            return cell;
+        }
+
+        // --- COPY / PASTE LOGIC ---
+
+        function copyDay(btn) {
+            const list = btn.closest('.day-cell').querySelector('.activity-list');
+            if (list) {
+                clipboardDay = list.innerHTML;
+                // Visual feedback
+                const origText = btn.innerHTML;
+                btn.innerHTML = '✅';
+                setTimeout(() => btn.innerHTML = origText, 1000);
+            }
+        }
+
+        function pasteDay(btn) {
+            if (!clipboardDay) return;
+            const list = btn.closest('.day-cell').querySelector('.activity-list');
+            if (list) {
+                if (confirm("Overwrite this day?")) {
+                    list.innerHTML = clipboardDay;
+                    saveList(list);
+                }
+            }
+        }
+
+        // --- WEEK COPY LOGIC ---
+
+        function startCopyWeekMode() {
+            copyWeekState = 'SOURCE';
+            document.getElementById('status-bar').style.display = 'block';
+            document.getElementById('status-bar').innerText = "Select any day in the week you want to COPY FROM...";
+            document.getElementById('btn-copy-week').style.display = 'none';
+            document.getElementById('btn-cancel-week').style.display = 'inline-block';
+        }
+
+        function cancelCopyWeek() {
+            copyWeekState = 'IDLE';
+            copyWeekSourceDate = null;
+            document.getElementById('status-bar').style.display = 'none';
+            document.getElementById('btn-copy-week').style.display = 'inline-block';
+            document.getElementById('btn-cancel-week').style.display = 'none';
+            renderCalendar(); // clear highlights
+        }
+
+        function handleWeekCopyClick(dateKey) {
+            const clickedDate = new Date(dateKey);
+            
+            // Calculate Start of Week (Sunday)
+            const dayOfWeek = clickedDate.getDay(); // 0 (Sun) - 6 (Sat)
+            const weekStart = new Date(clickedDate);
+            weekStart.setDate(clickedDate.getDate() - dayOfWeek);
+
+            if (copyWeekState === 'SOURCE') {
+                copyWeekSourceDate = weekStart;
+                copyWeekState = 'TARGET';
+                document.getElementById('status-bar').innerText = "Week Copied! Now click any day in the week you want to PASTE TO...";
+                highlightWeek(weekStart, true);
+            } else if (copyWeekState === 'TARGET') {
+                const targetWeekStart = weekStart;
+                performWeekCopy(copyWeekSourceDate, targetWeekStart);
+                cancelCopyWeek();
+            }
+        }
+
+        function highlightWeek(startDate, isSource) {
+            const grid = document.getElementById('calendar-grid');
+            const cells = grid.querySelectorAll('.day-cell');
+            
+            const datesInWeek = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(startDate);
+                d.setDate(startDate.getDate() + i);
+                datesInWeek.push(d.toISOString().split('T')[0]);
+            }
+
+            cells.forEach(cell => {
+                if (datesInWeek.includes(cell.dataset.dateKey)) {
+                    cell.classList.add('is-week-select');
+                }
+            });
+        }
+
+        function performWeekCopy(sourceStart, targetStart) {
+            for (let i = 0; i < 7; i++) {
+                // Source
+                const sDate = new Date(sourceStart);
+                sDate.setDate(sourceStart.getDate() + i);
+                const sKey = sDate.toISOString().split('T')[0];
+
+                // Target
+                const tDate = new Date(targetStart);
+                tDate.setDate(targetStart.getDate() + i);
+                const tKey = tDate.toISOString().split('T')[0];
+
+                // Get Data
+                const sourceData = localStorage.getItem(`list-${sKey}`);
+                if (sourceData) {
+                    localStorage.setItem(`list-${tKey}`, sourceData);
+                }
+            }
+            renderCalendar();
+        }
+
+
+        // --- GENERIC LOGIC ---
+
+        function saveList(list) {
+            localStorage.setItem(`list-${list.dataset.date}`, list.innerHTML);
+            applyColorsToList(list);
+        }
+
+        function handleInput(e) {
+            const list = e.currentTarget;
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            const li = selection.getRangeAt(0).startContainer.parentElement.closest('li');
+            if (!li) return;
+            
+            // Safe Text Extraction
+            let text = "";
+            li.childNodes.forEach(node => {
+                if (node.nodeType === 3) text += node.textContent;
+            });
+            text = text.trim();
+            
+            showSuggestion(li, text);
+        }
+
+        function showSuggestion(li, currentText) {
+            const pattern = flowPatterns[currentText.toLowerCase()];
+            if (pattern && !activeSuggestion) {
+                const span = document.createElement('span');
+                span.className = 'suggestion';
+                span.innerText = " \u2193 " + pattern; // Down arrow + pattern
+                li.appendChild(span);
+                activeSuggestion = pattern;
+            } else if (!pattern && activeSuggestion) {
+                const span = li.querySelector('.suggestion');
+                if (span) span.remove();
+                activeSuggestion = null;
+            }
+        }
+
+        function acceptSuggestion() {
+            const selection = window.getSelection();
+            const li = selection.rangeCount ? selection.getRangeAt(0).startContainer.parentElement.closest('li') : null;
+            if (!li || !activeSuggestion) return;
+            
+            const span = li.querySelector('.suggestion');
+            if (span) span.remove();
+            
+            // Create New Line BELOW
+            const newLi = document.createElement('li');
+            newLi.innerText = activeSuggestion;
+            li.after(newLi);
+            
+            // Focus New Line
+            const range = document.createRange();
+            range.selectNodeContents(newLi);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            activeSuggestion = null;
+            
+            // Check Color for new line
+            autoAssignColor(newLi.innerText.trim());
+            
+            saveList(li.closest('.activity-list'));
+        }
+
+        function learnPatterns(list) {
+            const items = Array.from(list.querySelectorAll('li')).map(i => i.innerText.trim());
+            for (let i = 0; i < items.length - 1; i++) {
+                if (items[i] && items[i+1]) {
+                    flowPatterns[items[i].toLowerCase()] = items[i+1];
+                }
+            }
+            localStorage.setItem('ayshe-flow-patterns', JSON.stringify(flowPatterns));
+        }
+
+        function getContrastYIQ(hexcolor){
+            hexcolor = hexcolor.replace("#", "");
+            if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(c=>c+c).join('');
+            var r = parseInt(hexcolor.substr(0,2),16);
+            var g = parseInt(hexcolor.substr(2,2),16);
+            var b = parseInt(hexcolor.substr(4,2),16);
+            var yiq = ((r*299)+(g*587)+(b*114))/1000;
+            return (yiq >= 128) ? 'black' : 'white';
+        }
+
+        function applyColorsToList(list) {
+            const items = list.querySelectorAll('li');
+            items.forEach(li => {
+                // Extract clean text to apply color
+                let text = "";
+                li.childNodes.forEach(node => {
+                    if (node.nodeType === 3) text += node.textContent;
+                });
+                text = text.trim().toLowerCase();
+                
+                if (topicColors[text]) {
+                    const bgColor = topicColors[text];
+                    li.style.backgroundColor = bgColor;
+                    li.style.color = getContrastYIQ(bgColor);
+                    li.style.border = '1px solid black';
+                } else {
+                    li.style.backgroundColor = 'transparent';
+                    li.style.color = 'inherit';
+                    li.style.border = 'none';
+                }
+            });
+        }
+
+        function autoAssignColor(topic) {
+            const lowerTopic = topic.toLowerCase();
+            let selectedColor;
+            
+            if (PRESET_COLORS[lowerTopic]) {
+                selectedColor = PRESET_COLORS[lowerTopic];
+            } else {
+                selectedColor = DISTINCT_PALETTE[randomColorIndex % DISTINCT_PALETTE.length];
+                randomColorIndex++; 
+            }
+            
+            // Save
+            topicColors[lowerTopic] = selectedColor;
+            localStorage.setItem('ayshe-topic-colors', JSON.stringify(topicColors));
+            
+            // Update UI (Efficiently, without destroying DOM/Focus)
+            document.querySelectorAll('.activity-list').forEach(list => applyColorsToList(list));
+        }
+
+        function clearData() {
+            if(confirm("Are you sure you want to clear all notes and color settings? This cannot be undone.")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function nextMonth() { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } renderCalendar(); }
+        function prevMonth() { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); }
+
+        document.addEventListener('keydown', (e) => {
+            // Escape key cancels week copy mode
+            if (e.key === "Escape" && copyWeekState !== 'IDLE') {
+                cancelCopyWeek();
+                return;
+            }
+
+            if (e.target.contentEditable === "true") return;
+            if (e.key === 'ArrowRight') nextMonth();
+            if (e.key === 'ArrowLeft') prevMonth();
+            if (e.key.toLowerCase() === 'p') window.print();
+        });
+
+        renderCalendar();
+    </script>
+</body>
+</html>
