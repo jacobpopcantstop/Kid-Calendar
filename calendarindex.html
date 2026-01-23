@@ -12,10 +12,11 @@
             --no-school: #ffcccc;
             --half-day: #fff4cc;
             --early-release: #cce5ff;
-            --field-trip: #d1e7dd; /* Mint Green */
+            --field-trip: #d1e7dd;
             --today-highlight: #ffeb3b;
-            --font-size: 16pt; 
+            --font-size: 16pt;
             --selection-highlight: #b3d9ff;
+            --drop-zone: rgba(100, 200, 100, 0.3);
         }
 
         @page {
@@ -33,31 +34,41 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            overflow: hidden; 
+            overflow: hidden;
         }
 
         @media print {
             .no-print { display: none !important; }
             .cell-tools { display: none !important; }
+            .drag-handle { display: none !important; }
             body { padding: 0; height: auto; overflow: visible; }
             .calendar-grid-wrapper { overflow: visible !important; height: auto !important; }
             .day-cell { min-height: 150px !important; }
-            .is-today { border: 4px solid black !important; } 
-            
+            .is-today { border: 4px solid black !important; }
+
             input[type="time"] {
                 border: none;
                 background: transparent;
                 appearance: none;
                 width: auto;
             }
-            
+
             * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
         }
 
-        /* NEW CLEAN HEADER STYLES */
+        /* Responsive font sizes for mobile */
+        @media (max-width: 768px) {
+            :root { --font-size: 12pt; }
+            .btn { padding: 10px 14px; font-size: 12pt; min-height: 44px; }
+            .tool-btn { min-width: 44px; min-height: 44px; font-size: 14pt; }
+            .day-number { font-size: 14pt; }
+            .app-title { font-size: 18pt; }
+            .weekday { font-size: 14pt; }
+        }
+
         .header-wrapper {
             background: #f8f9fa;
             border-bottom: 4px solid black;
@@ -98,6 +109,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -109,12 +121,12 @@
             cursor: pointer;
             border-radius: 6px;
             font-weight: bold;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, transform 0.1s;
         }
 
         .btn:hover { opacity: 0.8; }
-        
-        /* Button Variants */
+        .btn:active { transform: scale(0.98); }
+
         .btn-nav { background: #333; }
         .btn-danger { background: #d32f2f; font-size: 12pt; }
         .btn-action { background: #1976d2; }
@@ -122,6 +134,9 @@
         .btn-cancel { background: #616161; display: none; }
         .btn-toggle { background: #512da8; }
         .btn-print { background: #2e7d32; }
+        .btn-settings { background: #455a64; }
+        .btn-recurring { background: #00897b; }
+        .btn-export { background: #5d4037; }
 
         #month-name {
             text-align: center;
@@ -142,8 +157,7 @@
 
         .calendar-grid {
             display: grid;
-            /* Minimized Weekends: Sun(0.5) ... Sat(0.5) */
-            grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr 1fr 0.5fr; 
+            grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr 1fr 0.5fr;
             width: 100%;
         }
 
@@ -169,13 +183,18 @@
             flex-direction: column;
             min-height: 180px;
             background-color: white;
+            transition: background-color 0.2s;
         }
-        
+
         .weekly-view .day-cell {
-            min-height: 70vh; 
+            min-height: 70vh;
         }
 
         .day-cell:hover .cell-tools { display: flex; }
+
+        .day-cell.drag-over {
+            background-color: var(--drop-zone) !important;
+        }
 
         .cell-tools {
             position: absolute;
@@ -194,6 +213,7 @@
             cursor: pointer;
             padding: 2px 5px;
             font-weight: bold;
+            transition: background-color 0.2s;
         }
         .tool-btn:hover { background: #eee; }
 
@@ -232,6 +252,7 @@
             padding: 0;
             flex-grow: 1;
             list-style: none;
+            min-height: 50px;
         }
 
         .activity-row {
@@ -241,6 +262,34 @@
             margin-bottom: 4px;
             padding: 2px;
             border-radius: 4px;
+            transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
+        }
+
+        .activity-row.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+
+        .activity-row.drag-preview {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            background: white !important;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+            font-size: 14pt;
+            color: #999;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .drag-handle:hover {
+            color: #333;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
         }
 
         .time-input {
@@ -249,7 +298,7 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             background: rgba(255,255,255,0.8);
-            width: 95px; 
+            width: 95px;
             flex-shrink: 0;
             padding: 0 2px;
         }
@@ -277,11 +326,17 @@
             font-style: italic;
         }
 
+        .recurring-badge {
+            font-size: 10pt;
+            margin-left: 4px;
+            opacity: 0.7;
+        }
+
         .type-no-school { background-color: var(--no-school) !important; }
         .type-half-day { background-color: var(--half-day) !important; }
         .type-early-release { background-color: var(--early-release) !important; }
         .type-field-trip { background-color: var(--field-trip) !important; }
-        
+
         #status-bar {
             background: #fff3cd;
             color: #856404;
@@ -293,7 +348,8 @@
             margin-bottom: 5px;
         }
 
-        #edit-day-modal, #magic-plan-modal {
+        /* Modal Styles */
+        .modal {
             display: none;
             position: fixed;
             top: 50%; left: 50%;
@@ -303,19 +359,109 @@
             padding: 20px;
             z-index: 1001;
             min-width: 350px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
             box-shadow: 10px 10px 0px rgba(0,0,0,0.2);
         }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24pt;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #d32f2f;
+        }
+
         .modal-row { margin-bottom: 15px; }
         .modal-label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14pt; }
-        .modal-select, .modal-input, .modal-textarea { 
-            width: 100%; 
-            padding: 8px; 
-            font-size: 14pt; 
+        .modal-select, .modal-input, .modal-textarea {
+            width: 100%;
+            padding: 8px;
+            font-size: 14pt;
             border: 2px solid black;
             font-family: inherit;
+            box-sizing: border-box;
         }
         .modal-textarea { height: 100px; resize: none; }
-        
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .checkbox-group label:hover {
+            background: #f0f0f0;
+        }
+
+        .checkbox-group input:checked + span {
+            font-weight: bold;
+        }
+
+        .checkbox-group label:has(input:checked) {
+            background: #e3f2fd;
+            border-color: #1976d2;
+        }
+
+        .api-key-warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 12pt;
+        }
+
+        .preview-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12pt;
+            background: #f9f9f9;
+        }
+
+        .preview-list-item {
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+        }
+
         .loading-spinner {
             display: inline-block;
             width: 20px;
@@ -325,16 +471,38 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-right: 10px;
-            display: none;
         }
+
+        .loading-spinner.hidden { display: none; }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
+
         .overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5);
             z-index: 999;
+        }
+
+        /* Success Animation */
+        @keyframes successPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .success-animation {
+            animation: successPulse 0.3s ease-in-out;
+        }
+
+        /* Drop indicator for drag-and-drop */
+        .drop-indicator {
+            height: 3px;
+            background: #1976d2;
+            margin: 2px 0;
+            border-radius: 2px;
+            transition: opacity 0.2s;
         }
     </style>
 </head>
@@ -344,25 +512,27 @@
         <div class="title-row">
             <div>
                 <div class="app-title">Ayshe's Semester Planner</div>
-                <div class="app-subtitle">Auto-colors on Enter • Use Tab to autocomplete</div>
+                <div class="app-subtitle">Auto-colors on Enter | Tab to autocomplete | Drag to reorder</div>
             </div>
         </div>
 
         <div class="toolbar">
             <div class="toolbar-group">
-                <button class="btn btn-nav" onclick="navigatePrev()">← Prev</button>
-                <button class="btn btn-nav" onclick="navigateNext()">Next →</button>
-            </div>
-            
-            <div class="toolbar-group">
-                <button class="btn btn-toggle" onclick="toggleView()" id="btn-view-mode">Weekly View</button>
-                <button class="btn btn-magic" onclick="openMagicModal()">✨ Magic Plan</button>
+                <button class="btn btn-nav" onclick="App.events.navigatePrev()">&#8592; Prev</button>
+                <button class="btn btn-nav" onclick="App.events.navigateNext()">Next &#8594;</button>
             </div>
 
             <div class="toolbar-group">
-                <button class="btn btn-action" onclick="startCopyWeekMode()" id="btn-copy-week">Copy Week</button>
-                <button class="btn btn-cancel" onclick="cancelCopyWeek()" id="btn-cancel-week">Cancel Copy</button>
-                <button class="btn btn-danger" onclick="clearData()">Clear</button>
+                <button class="btn btn-toggle" onclick="App.events.toggleView()" id="btn-view-mode">Weekly View</button>
+                <button class="btn btn-recurring" onclick="App.recurring.openModal()">&#128260; Recurring</button>
+                <button class="btn btn-magic" onclick="App.magic.openModal()">&#10024; Magic Plan</button>
+            </div>
+
+            <div class="toolbar-group">
+                <button class="btn btn-action" onclick="App.events.startCopyWeekMode()" id="btn-copy-week">Copy Week</button>
+                <button class="btn btn-cancel" onclick="App.events.cancelCopyWeek()" id="btn-cancel-week">Cancel Copy</button>
+                <button class="btn btn-export" onclick="App.storage.openExportImportModal()">&#128190; Data</button>
+                <button class="btn btn-settings" onclick="App.events.openSettingsModal()">&#9881; Settings</button>
                 <button class="btn btn-print" onclick="window.print()">Print</button>
             </div>
         </div>
@@ -371,17 +541,22 @@
     <div id="status-bar">Select a day in the week you want to COPY FROM...</div>
 
     <div id="month-name">Month Year</div>
-    
+
     <div class="calendar-grid-wrapper">
         <div class="calendar-grid" id="calendar-grid">
             <!-- JS Populated -->
         </div>
     </div>
 
-    <!-- Edit Day Modal -->
+    <!-- Overlay -->
     <div id="overlay" class="overlay"></div>
-    <div id="edit-day-modal">
-        <h3>Edit Day Status</h3>
+
+    <!-- Edit Day Modal -->
+    <div id="edit-day-modal" class="modal">
+        <div class="modal-header">
+            <h3>Edit Day Status</h3>
+            <button class="modal-close" onclick="App.events.closeEditModal()">&times;</button>
+        </div>
         <input type="hidden" id="edit-date-key">
         <div class="modal-row">
             <label class="modal-label">Day Type:</label>
@@ -397,773 +572,1737 @@
             <label class="modal-label">Label (e.g. "Holiday"):</label>
             <input type="text" id="day-label-input" class="modal-input" placeholder="Optional text...">
         </div>
-        <div style="text-align: right;">
-            <button class="btn btn-danger" onclick="closeEditModal()" style="font-size: 12pt;">Cancel</button>
-            <button class="btn" onclick="saveDayStatus()" style="font-size: 12pt; background: #2e7d32;">Save Changes</button>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="App.events.closeEditModal()">Cancel</button>
+            <button class="btn" onclick="App.events.saveDayStatus()" style="background: #2e7d32;">Save Changes</button>
         </div>
     </div>
 
     <!-- Magic Plan Modal -->
-    <div id="magic-plan-modal">
-        <h3>✨ Magic Plan with Gemini</h3>
-        <p style="font-size: 12pt;">Describe what you want to add. Include days, times, and duration.<br>e.g., "Add Math Club every Monday at 3pm"</p>
+    <div id="magic-plan-modal" class="modal">
+        <div class="modal-header">
+            <h3>&#10024; Magic Plan with Gemini</h3>
+            <button class="modal-close" onclick="App.magic.closeModal()">&times;</button>
+        </div>
+        <div id="api-key-warning" class="api-key-warning" style="display: none;">
+            &#9888; No API key configured. Please add your Gemini API key in Settings first.
+        </div>
+        <p style="font-size: 12pt;">Describe what you want to add. Include days, times, and duration.<br>e.g., "Add Math Club every Monday at 3pm for the whole month"</p>
         <div class="modal-row">
             <textarea id="magic-prompt" class="modal-textarea" placeholder="Type your plan here..."></textarea>
         </div>
-        <div style="text-align: right;">
-            <div id="magic-loading" class="loading-spinner"></div>
-            <button class="btn btn-danger" onclick="closeMagicModal()" style="font-size: 12pt;">Cancel</button>
-            <button class="btn btn-magic" onclick="generatePlan()" style="font-size: 12pt;">Generate Plan</button>
+        <div class="modal-buttons">
+            <div id="magic-loading" class="loading-spinner hidden"></div>
+            <button class="btn btn-danger" onclick="App.magic.closeModal()">Cancel</button>
+            <button class="btn btn-magic" onclick="App.magic.generatePlan()" id="btn-generate-plan">Generate Plan</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-header">
+            <h3>&#9881; Settings</h3>
+            <button class="modal-close" onclick="App.events.closeSettingsModal()">&times;</button>
+        </div>
+        <div class="modal-row">
+            <label class="modal-label">Gemini API Key:</label>
+            <input type="password" id="settings-api-key" class="modal-input" placeholder="Enter your Gemini API key...">
+            <p style="font-size: 11pt; color: #666; margin-top: 5px;">
+                Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>
+            </p>
+        </div>
+        <div class="modal-row">
+            <label class="modal-label">School Year Events:</label>
+            <p style="font-size: 11pt; color: #666;">Configure default holidays and events for your school year using the Edit Day tool on each calendar day.</p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="App.events.closeSettingsModal()">Cancel</button>
+            <button class="btn" onclick="App.events.saveSettings()" style="background: #2e7d32;">Save Settings</button>
+        </div>
+    </div>
+
+    <!-- Recurring Event Modal -->
+    <div id="recurring-modal" class="modal">
+        <div class="modal-header">
+            <h3>&#128260; Recurring Events</h3>
+            <button class="modal-close" onclick="App.recurring.closeModal()">&times;</button>
+        </div>
+
+        <div id="recurring-list" style="margin-bottom: 20px;">
+            <!-- Existing recurring events listed here -->
+        </div>
+
+        <h4>Add New Recurring Event</h4>
+        <div class="modal-row">
+            <label class="modal-label">Activity Name:</label>
+            <input type="text" id="recurring-text" class="modal-input" placeholder="e.g., Math Club">
+        </div>
+        <div class="modal-row">
+            <label class="modal-label">Time (optional):</label>
+            <input type="time" id="recurring-time" class="modal-input">
+        </div>
+        <div class="modal-row">
+            <label class="modal-label">Pattern:</label>
+            <select id="recurring-pattern" class="modal-select">
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Bi-weekly</option>
+                <option value="monthly">Monthly (same day of month)</option>
+            </select>
+        </div>
+        <div class="modal-row" id="recurring-days-row">
+            <label class="modal-label">Days of Week:</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" value="0"><span>Sun</span></label>
+                <label><input type="checkbox" value="1"><span>Mon</span></label>
+                <label><input type="checkbox" value="2"><span>Tue</span></label>
+                <label><input type="checkbox" value="3"><span>Wed</span></label>
+                <label><input type="checkbox" value="4"><span>Thu</span></label>
+                <label><input type="checkbox" value="5"><span>Fri</span></label>
+                <label><input type="checkbox" value="6"><span>Sat</span></label>
+            </div>
+        </div>
+        <div class="modal-row">
+            <label class="modal-label">Start Date:</label>
+            <input type="date" id="recurring-start" class="modal-input">
+        </div>
+        <div class="modal-row">
+            <label class="modal-label">End Date (optional):</label>
+            <input type="date" id="recurring-end" class="modal-input">
+        </div>
+
+        <div id="recurring-preview" class="preview-list" style="display: none;">
+            <strong>Preview:</strong>
+            <div id="recurring-preview-list"></div>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn btn-action" onclick="App.recurring.preview()">Preview</button>
+            <button class="btn btn-danger" onclick="App.recurring.closeModal()">Cancel</button>
+            <button class="btn" onclick="App.recurring.add()" style="background: #2e7d32;">Add Recurring</button>
+        </div>
+    </div>
+
+    <!-- Export/Import Modal -->
+    <div id="export-import-modal" class="modal">
+        <div class="modal-header">
+            <h3>&#128190; Export / Import Data</h3>
+            <button class="modal-close" onclick="App.storage.closeExportImportModal()">&times;</button>
+        </div>
+
+        <div class="modal-row">
+            <label class="modal-label">Export All Data:</label>
+            <p style="font-size: 11pt; color: #666;">Download all your calendar data as a JSON file.</p>
+            <button class="btn btn-action" onclick="App.storage.exportData()" style="margin-top: 10px;">&#128229; Export Data</button>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <div class="modal-row">
+            <label class="modal-label">Import Data:</label>
+            <p style="font-size: 11pt; color: #666;">Load data from a previously exported file.</p>
+            <input type="file" id="import-file" accept=".json" style="margin-top: 10px;">
+        </div>
+
+        <div class="modal-row">
+            <label class="modal-label">Import Mode:</label>
+            <select id="import-mode" class="modal-select">
+                <option value="merge">Merge (add to existing data)</option>
+                <option value="replace">Replace (clear existing data first)</option>
+            </select>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="App.storage.closeExportImportModal()">Cancel</button>
+            <button class="btn" onclick="App.storage.importData()" style="background: #2e7d32;">&#128228; Import</button>
+        </div>
+    </div>
+
+    <!-- Recurring Instance Options Modal -->
+    <div id="recurring-instance-modal" class="modal" style="min-width: 300px;">
+        <div class="modal-header">
+            <h3>Recurring Event Options</h3>
+            <button class="modal-close" onclick="App.recurring.closeInstanceModal()">&times;</button>
+        </div>
+        <input type="hidden" id="recurring-instance-id">
+        <input type="hidden" id="recurring-instance-date">
+        <p id="recurring-instance-text" style="font-size: 14pt; margin-bottom: 15px;"></p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-action" onclick="App.recurring.deleteInstance()">Delete This Instance Only</button>
+            <button class="btn btn-danger" onclick="App.recurring.deleteAll()">Delete All Occurrences</button>
+            <button class="btn" onclick="App.recurring.closeInstanceModal()" style="background: #616161;">Cancel</button>
         </div>
     </div>
 
     <script>
-        const apiKey = "AIzaSyCIlkb0xgRvbLzmENblIUv1BFL8j1WxGwY"; 
-        
-        // State
-        let currentYear = 2025;
-        let currentMonth = 1; 
-        let viewMode = 'MONTH'; // 'MONTH' or 'WEEK'
-        let currentWeekStart = new Date(2025, 1, 1); 
-        
-        let topicColors = JSON.parse(localStorage.getItem('ayshe-topic-colors')) || {};
-        let flowPatterns = JSON.parse(localStorage.getItem('ayshe-flow-patterns')) || {}; 
-        
-        // Merge default events with custom user events
-        const defaultEvents = {
-            "2025-02-05": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-02-13": { type: "no-school", text: "Holiday" },
-            "2025-02-16": { type: "no-school", text: "Holiday" },
-            "2025-02-19": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-03-03": { type: "half-day", text: "Half Day" },
-            "2025-03-04": { type: "half-day", text: "Half Day" },
-            "2025-03-05": { type: "half-day", text: "Half Day" },
-            "2025-03-06": { type: "no-school", text: "Staff Day" },
-            "2025-03-19": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-03-27": { type: "half-day", text: "Half Day" },
-            "2025-03-30": { type: "no-school", text: "Spring Break" },
-            "2025-03-31": { type: "no-school", text: "Spring Break" },
-            "2025-04-01": { type: "no-school", text: "Spring Break" },
-            "2025-04-02": { type: "no-school", text: "Spring Break" },
-            "2025-04-03": { type: "no-school", text: "Spring Break" },
-            "2025-04-04": { type: "no-school", text: "Spring Break" },
-            "2025-04-05": { type: "no-school", text: "Easter" },
-            "2025-04-13": { type: "no-school", text: "Staff Day" },
-            "2025-04-16": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-04-30": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-05-07": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-05-08": { type: "no-school", text: "Snow Day" },
-            "2025-05-21": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-05-26": { type: "no-school", text: "Memorial Day" },
-            "2025-06-04": { type: "early-release", text: "Early Release (2:30)" },
-            "2025-06-10": { type: "half-day", text: "Last Day!" }
-        };
-        
-        let customEvents = JSON.parse(localStorage.getItem('ayshe-custom-events')) || {};
-        
-        function getEvent(dateKey) {
-            return customEvents[dateKey] || defaultEvents[dateKey];
-        }
+    // ============================================
+    // APP MODULE - Main Application Object
+    // ============================================
+    const App = {
+        // --------------------------------------------
+        // STATE - All application state variables
+        // --------------------------------------------
+        state: {
+            currentYear: new Date().getFullYear(),
+            currentMonth: new Date().getMonth(),
+            viewMode: 'MONTH', // 'MONTH' or 'WEEK'
+            currentWeekStart: new Date(),
+            topicColors: {},
+            flowPatterns: {},
+            customEvents: {},
+            clipboardDay: null,
+            copyWeekState: 'IDLE',
+            copyWeekSourceDate: null,
+            pendingTopic: null,
+            activeSuggestion: null,
+            randomColorIndex: 0
+        },
 
-        let pendingTopic = null;
-        let activeSuggestion = null;
-        let randomColorIndex = Object.keys(topicColors).length;
-        
-        let clipboardDay = null;
-        let copyWeekState = 'IDLE'; 
-        let copyWeekSourceDate = null;
-
-        const PRESET_COLORS = {
-            "math": "#a0c4ff", "mathematics": "#a0c4ff",
-            "science": "#9bf6ff", "biology": "#9bf6ff", "chemistry": "#9bf6ff",
-            "english": "#ffc6ff", "reading": "#ffc6ff", "writing": "#ffc6ff",
-            "history": "#fdffb6", "social studies": "#fdffb6",
-            "art": "#bdb2ff", "music": "#bdb2ff",
-            "pe": "#caffbf", "gym": "#caffbf",
-            "lunch": "#ffd6a5", "break": "#e5e5e5",
-            "study": "#ffadad", "speech": "#ffc4d6", "therapy": "#ffc4d6",
-            "field trip": "#d1e7dd"
-        };
-
-        const DISTINCT_PALETTE = [
-            "#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", 
-            "#a0c4ff", "#bdb2ff", "#ffc6ff", "#fffffc", "#d4a373",
-            "#b5e48c", "#caf0f8", "#e2ece9", "#f0efeb", "#dee2e6"
-        ];
-
-        const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-        function toggleView() {
-            if (viewMode === 'MONTH') {
-                viewMode = 'WEEK';
-                document.getElementById('btn-view-mode').innerText = "Monthly View";
-                const today = new Date();
-                if(today.getFullYear() === currentYear && today.getMonth() === currentMonth) {
-                    currentWeekStart = new Date(today);
-                } else {
-                    currentWeekStart = new Date(currentYear, currentMonth, 1);
-                }
-                currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
-            } else {
-                viewMode = 'MONTH';
-                document.getElementById('btn-view-mode').innerText = "Weekly View";
-                currentMonth = currentWeekStart.getMonth();
-                currentYear = currentWeekStart.getFullYear();
+        // --------------------------------------------
+        // CONFIG - Constants and presets
+        // --------------------------------------------
+        config: {
+            PRESET_COLORS: {
+                "math": "#a0c4ff", "mathematics": "#a0c4ff",
+                "science": "#9bf6ff", "biology": "#9bf6ff", "chemistry": "#9bf6ff",
+                "english": "#ffc6ff", "reading": "#ffc6ff", "writing": "#ffc6ff",
+                "history": "#fdffb6", "social studies": "#fdffb6",
+                "art": "#bdb2ff", "music": "#bdb2ff",
+                "pe": "#caffbf", "gym": "#caffbf",
+                "lunch": "#ffd6a5", "break": "#e5e5e5",
+                "study": "#ffadad", "speech": "#ffc4d6", "therapy": "#ffc4d6",
+                "field trip": "#d1e7dd"
+            },
+            DISTINCT_PALETTE: [
+                "#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff",
+                "#a0c4ff", "#bdb2ff", "#ffc6ff", "#fffffc", "#d4a373",
+                "#b5e48c", "#caf0f8", "#e2ece9", "#f0efeb", "#dee2e6"
+            ],
+            WEEKDAYS: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+            STORAGE_KEYS: {
+                TOPIC_COLORS: 'ayshe-topic-colors',
+                FLOW_PATTERNS: 'ayshe-flow-patterns',
+                CUSTOM_EVENTS: 'ayshe-custom-events',
+                RECURRING_EVENTS: 'ayshe-recurring-events',
+                API_KEY: 'ayshe-api-key',
+                DELETED_INSTANCES: 'ayshe-deleted-instances'
             }
-            renderCalendar();
-        }
+        },
 
-        function navigateNext() {
-            if (viewMode === 'MONTH') {
-                currentMonth++; 
-                if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-            } else {
-                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-                const midWeek = new Date(currentWeekStart);
-                midWeek.setDate(midWeek.getDate() + 3);
-                currentMonth = midWeek.getMonth();
-                currentYear = midWeek.getFullYear();
-            }
-            renderCalendar();
-        }
+        // --------------------------------------------
+        // STORAGE - localStorage operations
+        // --------------------------------------------
+        storage: {
+            init: function() {
+                App.state.topicColors = JSON.parse(localStorage.getItem(App.config.STORAGE_KEYS.TOPIC_COLORS)) || {};
+                App.state.flowPatterns = JSON.parse(localStorage.getItem(App.config.STORAGE_KEYS.FLOW_PATTERNS)) || {};
+                App.state.customEvents = JSON.parse(localStorage.getItem(App.config.STORAGE_KEYS.CUSTOM_EVENTS)) || {};
+                App.state.randomColorIndex = Object.keys(App.state.topicColors).length;
+            },
 
-        function navigatePrev() {
-            if (viewMode === 'MONTH') {
-                currentMonth--; 
-                if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-            } else {
-                currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-                const midWeek = new Date(currentWeekStart);
-                midWeek.setDate(midWeek.getDate() + 3);
-                currentMonth = midWeek.getMonth();
-                currentYear = midWeek.getFullYear();
-            }
-            renderCalendar();
-        }
+            getApiKey: function() {
+                return localStorage.getItem(App.config.STORAGE_KEYS.API_KEY) || '';
+            },
 
-        function renderCalendar() {
-            const grid = document.getElementById('calendar-grid');
-            const monthHeader = document.getElementById('month-name');
-            grid.innerHTML = '';
-            
-            weekdays.forEach(day => {
-                const div = document.createElement('div');
-                div.className = 'weekday';
-                div.innerText = day;
-                grid.appendChild(div);
-            });
+            setApiKey: function(key) {
+                localStorage.setItem(App.config.STORAGE_KEYS.API_KEY, key);
+            },
 
-            if (viewMode === 'MONTH') {
-                renderMonthView(grid, monthHeader);
-                grid.classList.remove('weekly-view');
-            } else {
-                renderWeekView(grid, monthHeader);
-                grid.classList.add('weekly-view');
-            }
-        }
+            saveList: function(list) {
+                localStorage.setItem(`list-${list.dataset.date}`, list.innerHTML);
+                App.render.applyColorsToList(list);
+            },
 
-        function renderMonthView(grid, header) {
-            const date = new Date(currentYear, currentMonth, 1);
-            header.innerText = `${date.toLocaleString('default', { month: 'long' })} ${currentYear}`;
+            getEvent: function(dateKey) {
+                return App.state.customEvents[dateKey];
+            },
 
-            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const prevLastDay = new Date(currentYear, currentMonth, 0).getDate();
-
-            for (let i = firstDay; i > 0; i--) grid.appendChild(createCell(prevLastDay - i + 1, false, -1));
-            for (let i = 1; i <= lastDay; i++) grid.appendChild(createCell(i, true));
-        }
-
-        function renderWeekView(grid, header) {
-            const weekEnd = new Date(currentWeekStart);
-            weekEnd.setDate(currentWeekStart.getDate() + 6);
-            header.innerText = `Week of ${currentWeekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
-
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(currentWeekStart);
-                d.setDate(currentWeekStart.getDate() + i);
-                grid.appendChild(createCellFromDate(d));
-            }
-        }
-
-        function createCellFromDate(dateObj) {
-            return createCell(dateObj.getDate(), true, 0, dateObj);
-        }
-
-        function createCell(day, isCurrent, offsetMonth = 0, specificDate = null) {
-            const cell = document.createElement('div');
-            cell.className = 'day-cell';
-            
-            let dateObj;
-            if (specificDate) {
-                dateObj = specificDate;
-            } else {
-                let targetMonth = currentMonth;
-                let targetYear = currentYear;
-                if (offsetMonth === -1) { 
-                    targetMonth--;
-                    if (targetMonth < 0) { targetMonth = 11; targetYear--; }
-                }
-                dateObj = new Date(targetYear, targetMonth, day);
-            }
-
-            if (viewMode === 'MONTH' && !isCurrent) {
-                cell.classList.add('not-current-month');
-            }
-
-            const dateKey = dateObj.toISOString().split('T')[0];
-            cell.dataset.dateKey = dateKey; 
-            
-            cell.innerHTML = `<div class="day-number">${day}</div>`;
-
-            const tools = document.createElement('div');
-            tools.className = 'cell-tools no-print';
-            tools.innerHTML = `
-                <button class="tool-btn" title="Edit Day Status" onclick="openEditModal('${dateKey}')">⚙️</button>
-                <button class="tool-btn" title="Copy Day" onclick="copyDay(this)">📄</button>
-                <button class="tool-btn" title="Paste Day" onclick="pasteDay(this)">📋</button>
-            `;
-            cell.appendChild(tools);
-
-            const today = new Date();
-            if (today.toDateString() === dateObj.toDateString()) {
-                cell.classList.add('is-today');
-            }
-
-            const eventData = getEvent(dateKey);
-            if (eventData) {
-                cell.classList.add(`type-${eventData.type}`);
-                if (eventData.text) {
-                    const label = document.createElement('div');
-                    label.className = 'event-label';
-                    label.innerText = eventData.text;
-                    cell.appendChild(label);
-                }
-            }
-
-            const list = document.createElement('ul');
-            list.className = 'activity-list';
-            list.dataset.date = dateKey;
-
-            cell.onclick = (e) => {
-                if (copyWeekState !== 'IDLE' && !e.target.closest('button')) {
-                    handleWeekCopyClick(dateKey);
-                }
-            };
-
-            const savedData = localStorage.getItem(`list-${dateKey}`);
-            if (savedData) {
-                list.innerHTML = savedData;
-                applyColorsToList(list);
-            } else {
-                // Initialize with one empty row if no data
-                addActivityRow(list);
-            }
-
-            // Restore input values from HTML attributes if necessary
-            list.querySelectorAll('.time-input').forEach(input => {
-                if(input.getAttribute('value')) input.value = input.getAttribute('value');
-                input.addEventListener('change', () => {
-                    input.setAttribute('value', input.value); // Sync for saving
-                    saveList(list);
-                });
-            });
-            
-            // Set up listeners for text areas
-            list.querySelectorAll('.activity-text').forEach(span => setupTextListeners(span, list));
-
-            cell.appendChild(list);
-            
-            // Allow clicking empty space to focus last item
-            cell.addEventListener('click', (e) => {
-                 if(e.target === cell || e.target === list) {
-                     const rows = list.querySelectorAll('.activity-row');
-                     if(rows.length > 0) {
-                         const lastText = rows[rows.length-1].querySelector('.activity-text');
-                         lastText.focus();
-                     } else {
-                         addActivityRow(list);
-                     }
-                 }
-            });
-
-            return cell;
-        }
-        
-        // --- ROW MANAGEMENT ---
-        
-        function addActivityRow(list, insertAfterRow = null, text = "") {
-            const row = document.createElement('li');
-            row.className = 'activity-row';
-            
-            const timeInput = document.createElement('input');
-            timeInput.type = 'time';
-            timeInput.className = 'time-input';
-            timeInput.addEventListener('change', () => {
-                timeInput.setAttribute('value', timeInput.value);
-                saveList(list);
-            });
-            
-            const textSpan = document.createElement('span');
-            textSpan.className = 'activity-text';
-            textSpan.contentEditable = true;
-            textSpan.innerText = text;
-            textSpan.setAttribute('data-placeholder', 'Plan...');
-            
-            setupTextListeners(textSpan, list);
-            
-            row.appendChild(timeInput);
-            row.appendChild(textSpan);
-            
-            if (insertAfterRow) {
-                insertAfterRow.after(row);
-            } else {
-                list.appendChild(row);
-            }
-            
-            // Auto focus
-            setTimeout(() => textSpan.focus(), 0);
-            
-            // Check color if text exists
-            if(text) autoAssignColor(text);
-            
-            return row;
-        }
-        
-        function setupTextListeners(span, list) {
-            span.addEventListener('input', (e) => {
-                // Handle patterns
-                handleInput(e, span);
-                saveList(list);
-            });
-            
-            span.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const text = (e.clipboardData || window.clipboardData).getData('text');
-                document.execCommand('insertText', false, text);
-            });
-            
-            span.addEventListener('blur', () => {
-                if(span.innerText.trim() === '' && list.querySelectorAll('.activity-row').length > 1) {
-                    // Only delete if empty AND not the only row? 
-                    // Actually, let's keep empty rows for manual editing, but maybe remove if completely untouched?
-                    // Let's stick to user explicit delete (backspace) or explicit create
-                }
-                saveList(list);
-            });
-            
-            span.addEventListener('keydown', (e) => {
-                if(e.key === 'Enter') {
-                    e.preventDefault();
-                    addActivityRow(list, span.closest('.activity-row'));
-                    learnPatterns(list);
-                    // Check color of current
-                    if(span.innerText.length > 1) autoAssignColor(span.innerText);
-                    saveList(list);
-                }
-                if(e.key === 'Backspace' && span.innerText === '') {
-                    // Remove row if empty and not only row
-                    const rows = list.querySelectorAll('.activity-row');
-                    if(rows.length > 1) {
-                        e.preventDefault();
-                        const row = span.closest('.activity-row');
-                        const prev = row.previousElementSibling;
-                        row.remove();
-                        if(prev) {
-                            const prevText = prev.querySelector('.activity-text');
-                            prevText.focus();
-                            // Move cursor to end
-                            const range = document.createRange();
-                            range.selectNodeContents(prevText);
-                            range.collapse(false);
-                            const sel = window.getSelection();
-                            sel.removeAllRanges();
-                            sel.addRange(range);
-                        }
-                        saveList(list);
+            getAllActivityKeys: function() {
+                const keys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('list-')) {
+                        keys.push(key);
                     }
                 }
-                if(e.key === 'Tab' && activeSuggestion) {
-                    e.preventDefault();
-                    acceptSuggestion(span, list);
-                }
-            });
-        }
+                return keys;
+            },
 
-        // --- GEMINI MAGIC PLAN LOGIC ---
-        function openMagicModal() {
-            document.getElementById('magic-plan-modal').style.display = 'block';
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('magic-prompt').focus();
-        }
+            exportData: function() {
+                const data = {
+                    version: 2,
+                    exportDate: new Date().toISOString(),
+                    activities: {},
+                    customEvents: App.state.customEvents,
+                    topicColors: App.state.topicColors,
+                    flowPatterns: App.state.flowPatterns,
+                    recurringEvents: App.recurring.patterns,
+                    deletedInstances: JSON.parse(localStorage.getItem(App.config.STORAGE_KEYS.DELETED_INSTANCES)) || {}
+                };
 
-        function closeMagicModal() {
-            document.getElementById('magic-plan-modal').style.display = 'none';
-            document.getElementById('overlay').style.display = 'none';
-        }
-
-        async function generatePlan() {
-            const prompt = document.getElementById('magic-prompt').value;
-            if(!prompt) return;
-
-            const loading = document.getElementById('magic-loading');
-            loading.style.display = 'inline-block';
-
-            // Context-aware prompt to ensure dates land in the current view
-            const currentViewDate = new Date(currentYear, currentMonth, 1);
-            const viewName = currentViewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-            const systemPrompt = `You are a scheduling assistant. The user is planning specifically for ${viewName}. 
-            Return a JSON object where keys are dates in 'YYYY-MM-DD' format and values are ARRAYS of objects.
-            Each object should have 'time' (HH:MM or empty string) and 'text' (activity description).
-            Example: {"2025-02-14": [{"time": "14:00", "text": "Valentine's Party"}], "2025-02-17": [{"time": "", "text": "No School"}]}
-            Do not format as markdown. Return raw JSON only.`;
-
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] }
-                    })
+                // Gather all activity data
+                App.storage.getAllActivityKeys().forEach(key => {
+                    data.activities[key] = localStorage.getItem(key);
                 });
 
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `semester-planner-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('Data exported successfully!');
+            },
+
+            importData: function() {
+                const fileInput = document.getElementById('import-file');
+                const mode = document.getElementById('import-mode').value;
+
+                if (!fileInput.files.length) {
+                    alert('Please select a file to import.');
+                    return;
                 }
 
-                const data = await response.json();
-                
-                if (!data.candidates || !data.candidates[0].content) {
-                    throw new Error("No plan generated. Try a different description.");
-                }
+                const file = fileInput.files[0];
+                const reader = new FileReader();
 
-                const text = data.candidates[0].content.parts[0].text;
-                let cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                
-                // Extra safety for JSON parsing
-                const firstBrace = cleanJson.indexOf('{');
-                const lastBrace = cleanJson.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1) {
-                    cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
-                }
-                
-                const schedule = JSON.parse(cleanJson);
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
 
-                for (const dateKey in schedule) {
-                    const items = schedule[dateKey];
-                    let newRowsHtml = '';
-                    
-                    if (Array.isArray(items)) {
-                        items.forEach(item => {
-                            let itemText = "";
-                            let itemTime = "";
+                        // Validate structure
+                        if (!data.version || !data.activities) {
+                            throw new Error('Invalid file format');
+                        }
 
-                            // Handle string vs object format safely
-                            if (typeof item === 'string') {
-                                itemText = item;
+                        if (mode === 'replace') {
+                            // Clear existing data
+                            App.storage.getAllActivityKeys().forEach(key => {
+                                localStorage.removeItem(key);
+                            });
+                            localStorage.removeItem(App.config.STORAGE_KEYS.CUSTOM_EVENTS);
+                            localStorage.removeItem(App.config.STORAGE_KEYS.TOPIC_COLORS);
+                            localStorage.removeItem(App.config.STORAGE_KEYS.FLOW_PATTERNS);
+                            localStorage.removeItem(App.config.STORAGE_KEYS.RECURRING_EVENTS);
+                            localStorage.removeItem(App.config.STORAGE_KEYS.DELETED_INSTANCES);
+                        }
+
+                        // Import activities
+                        for (const key in data.activities) {
+                            if (mode === 'merge') {
+                                const existing = localStorage.getItem(key);
+                                if (existing) {
+                                    // Append new items
+                                    localStorage.setItem(key, existing + data.activities[key]);
+                                } else {
+                                    localStorage.setItem(key, data.activities[key]);
+                                }
                             } else {
-                                itemText = item.text || "";
-                                itemTime = item.time || "";
+                                localStorage.setItem(key, data.activities[key]);
                             }
-
-                            if (!itemText) return;
-
-                            // Update colors logic FIRST
-                            autoAssignColor(itemText); 
-                            
-                            const valAttr = itemTime ? `value="${itemTime}"` : '';
-                            newRowsHtml += `<li class="activity-row" style="${getStyleForTopic(itemText)}">
-                                <input type="time" class="time-input" ${valAttr}>
-                                <span class="activity-text" contenteditable="true" data-placeholder="Plan...">${itemText}</span>
-                            </li>`;
-                        });
-                    }
-                    
-                    if (newRowsHtml) {
-                        const existing = localStorage.getItem(`list-${dateKey}`) || '';
-                        const div = document.createElement('div');
-                        div.innerHTML = existing;
-                        
-                        // Check if current list is "empty" (just one placeholder row)
-                        const existingRow = div.querySelector('.activity-row');
-                        const existingText = div.querySelector('.activity-text');
-                        
-                        if(existingRow && existingText && existingText.innerText.trim() === '') {
-                             div.innerHTML = newRowsHtml;
-                        } else {
-                             div.innerHTML += newRowsHtml;
                         }
-                        localStorage.setItem(`list-${dateKey}`, div.innerHTML);
+
+                        // Import other data
+                        if (data.customEvents) {
+                            const existing = mode === 'merge' ? App.state.customEvents : {};
+                            localStorage.setItem(App.config.STORAGE_KEYS.CUSTOM_EVENTS,
+                                JSON.stringify({...existing, ...data.customEvents}));
+                        }
+
+                        if (data.topicColors) {
+                            const existing = mode === 'merge' ? App.state.topicColors : {};
+                            localStorage.setItem(App.config.STORAGE_KEYS.TOPIC_COLORS,
+                                JSON.stringify({...existing, ...data.topicColors}));
+                        }
+
+                        if (data.flowPatterns) {
+                            const existing = mode === 'merge' ? App.state.flowPatterns : {};
+                            localStorage.setItem(App.config.STORAGE_KEYS.FLOW_PATTERNS,
+                                JSON.stringify({...existing, ...data.flowPatterns}));
+                        }
+
+                        if (data.recurringEvents) {
+                            const existing = mode === 'merge' ? App.recurring.patterns : [];
+                            localStorage.setItem(App.config.STORAGE_KEYS.RECURRING_EVENTS,
+                                JSON.stringify(mode === 'merge' ? [...existing, ...data.recurringEvents] : data.recurringEvents));
+                        }
+
+                        if (data.deletedInstances) {
+                            const existing = mode === 'merge' ?
+                                (JSON.parse(localStorage.getItem(App.config.STORAGE_KEYS.DELETED_INSTANCES)) || {}) : {};
+                            localStorage.setItem(App.config.STORAGE_KEYS.DELETED_INSTANCES,
+                                JSON.stringify({...existing, ...data.deletedInstances}));
+                        }
+
+                        // Reload state and re-render
+                        App.storage.init();
+                        App.recurring.load();
+                        App.render.calendar();
+                        App.storage.closeExportImportModal();
+                        alert('Data imported successfully!');
+
+                    } catch (error) {
+                        console.error('Import error:', error);
+                        alert('Error importing data: ' + error.message);
+                    }
+                };
+
+                reader.readAsText(file);
+            },
+
+            openExportImportModal: function() {
+                document.getElementById('export-import-modal').style.display = 'block';
+                document.getElementById('overlay').style.display = 'block';
+            },
+
+            closeExportImportModal: function() {
+                document.getElementById('export-import-modal').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('import-file').value = '';
+            },
+
+            clearData: function() {
+                if(confirm("Are you sure you want to clear all notes and color settings? This cannot be undone.")) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            }
+        },
+
+        // --------------------------------------------
+        // RENDER - DOM rendering functions
+        // --------------------------------------------
+        render: {
+            calendar: function() {
+                const grid = document.getElementById('calendar-grid');
+                const monthHeader = document.getElementById('month-name');
+                grid.innerHTML = '';
+
+                App.config.WEEKDAYS.forEach(day => {
+                    const div = document.createElement('div');
+                    div.className = 'weekday';
+                    div.innerText = day;
+                    grid.appendChild(div);
+                });
+
+                if (App.state.viewMode === 'MONTH') {
+                    App.render.monthView(grid, monthHeader);
+                    grid.classList.remove('weekly-view');
+                } else {
+                    App.render.weekView(grid, monthHeader);
+                    grid.classList.add('weekly-view');
+                }
+            },
+
+            monthView: function(grid, header) {
+                const date = new Date(App.state.currentYear, App.state.currentMonth, 1);
+                header.innerText = `${date.toLocaleString('default', { month: 'long' })} ${App.state.currentYear}`;
+
+                const firstDay = new Date(App.state.currentYear, App.state.currentMonth, 1).getDay();
+                const lastDay = new Date(App.state.currentYear, App.state.currentMonth + 1, 0).getDate();
+                const prevLastDay = new Date(App.state.currentYear, App.state.currentMonth, 0).getDate();
+
+                for (let i = firstDay; i > 0; i--) {
+                    grid.appendChild(App.render.createCell(prevLastDay - i + 1, false, -1));
+                }
+                for (let i = 1; i <= lastDay; i++) {
+                    grid.appendChild(App.render.createCell(i, true));
+                }
+            },
+
+            weekView: function(grid, header) {
+                const weekEnd = new Date(App.state.currentWeekStart);
+                weekEnd.setDate(App.state.currentWeekStart.getDate() + 6);
+                header.innerText = `Week of ${App.state.currentWeekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
+
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(App.state.currentWeekStart);
+                    d.setDate(App.state.currentWeekStart.getDate() + i);
+                    grid.appendChild(App.render.createCellFromDate(d));
+                }
+            },
+
+            createCellFromDate: function(dateObj) {
+                return App.render.createCell(dateObj.getDate(), true, 0, dateObj);
+            },
+
+            createCell: function(day, isCurrent, offsetMonth = 0, specificDate = null) {
+                const cell = document.createElement('div');
+                cell.className = 'day-cell';
+
+                let dateObj;
+                if (specificDate) {
+                    dateObj = specificDate;
+                } else {
+                    let targetMonth = App.state.currentMonth;
+                    let targetYear = App.state.currentYear;
+                    if (offsetMonth === -1) {
+                        targetMonth--;
+                        if (targetMonth < 0) { targetMonth = 11; targetYear--; }
+                    }
+                    dateObj = new Date(targetYear, targetMonth, day);
+                }
+
+                if (App.state.viewMode === 'MONTH' && !isCurrent) {
+                    cell.classList.add('not-current-month');
+                }
+
+                const dateKey = dateObj.toISOString().split('T')[0];
+                cell.dataset.dateKey = dateKey;
+
+                cell.innerHTML = `<div class="day-number">${day}</div>`;
+
+                const tools = document.createElement('div');
+                tools.className = 'cell-tools no-print';
+                tools.innerHTML = `
+                    <button class="tool-btn" title="Edit Day Status" onclick="App.events.openEditModal('${dateKey}')">&#9881;</button>
+                    <button class="tool-btn" title="Copy Day" onclick="App.events.copyDay(this)">&#128196;</button>
+                    <button class="tool-btn" title="Paste Day" onclick="App.events.pasteDay(this)">&#128203;</button>
+                `;
+                cell.appendChild(tools);
+
+                const today = new Date();
+                if (today.toDateString() === dateObj.toDateString()) {
+                    cell.classList.add('is-today');
+                }
+
+                const eventData = App.storage.getEvent(dateKey);
+                if (eventData) {
+                    cell.classList.add(`type-${eventData.type}`);
+                    if (eventData.text) {
+                        const label = document.createElement('div');
+                        label.className = 'event-label';
+                        label.innerText = eventData.text;
+                        cell.appendChild(label);
                     }
                 }
 
-                closeMagicModal();
-                renderCalendar(); 
-                alert("✨ Plan Generated Successfully!");
+                const list = document.createElement('ul');
+                list.className = 'activity-list';
+                list.dataset.date = dateKey;
 
-            } catch (error) {
-                console.error(error);
-                alert("Magic Plan Error: " + error.message);
-            } finally {
-                loading.style.display = 'none';
-            }
-        }
-        
-        function getStyleForTopic(text) {
-             const lower = text.trim().toLowerCase();
-             if(topicColors[lower]) {
-                 const bg = topicColors[lower];
-                 const color = getContrastYIQ(bg);
-                 return `background-color: ${bg}; color: ${color}; border: 1px solid black;`;
-             }
-             return "";
-        }
+                // Setup drag-and-drop for the list
+                App.dragDrop.setupList(list);
 
-        // --- EDIT DAY STATUS LOGIC ---
-        
-        function openEditModal(dateKey) {
-            const modal = document.getElementById('edit-day-modal');
-            const overlay = document.getElementById('overlay');
-            const dateInput = document.getElementById('edit-date-key');
-            const typeSelect = document.getElementById('day-type-select');
-            const labelInput = document.getElementById('day-label-input');
+                cell.onclick = (e) => {
+                    if (App.state.copyWeekState !== 'IDLE' && !e.target.closest('button')) {
+                        App.events.handleWeekCopyClick(dateKey);
+                    }
+                };
 
-            const eventData = getEvent(dateKey);
-            
-            dateInput.value = dateKey;
-            typeSelect.value = eventData ? eventData.type : "";
-            labelInput.value = eventData ? eventData.text : "";
+                // Add recurring events for this date
+                const recurringForDate = App.recurring.getEventsForDate(dateKey);
 
-            modal.style.display = 'block';
-            overlay.style.display = 'block';
-        }
-
-        function closeEditModal() {
-            document.getElementById('edit-day-modal').style.display = 'none';
-            document.getElementById('overlay').style.display = 'none';
-        }
-
-        function saveDayStatus() {
-            const dateKey = document.getElementById('edit-date-key').value;
-            const type = document.getElementById('day-type-select').value;
-            const text = document.getElementById('day-label-input').value;
-
-            if (type === "" && text === "") {
-                delete customEvents[dateKey];
-            } else {
-                customEvents[dateKey] = { type: type, text: text };
-            }
-
-            localStorage.setItem('ayshe-custom-events', JSON.stringify(customEvents));
-            closeEditModal();
-            renderCalendar();
-        }
-
-        // --- COPY / PASTE LOGIC ---
-
-        function copyDay(btn) {
-            const list = btn.closest('.day-cell').querySelector('.activity-list');
-            if (list) {
-                clipboardDay = list.innerHTML;
-                const origText = btn.innerHTML;
-                btn.innerHTML = '✅';
-                setTimeout(() => btn.innerHTML = origText, 1000);
-            }
-        }
-
-        function pasteDay(btn) {
-            if (!clipboardDay) return;
-            const list = btn.closest('.day-cell').querySelector('.activity-list');
-            if (list) {
-                if (confirm("Overwrite this day?")) {
-                    list.innerHTML = clipboardDay;
-                    saveList(list);
-                    renderCalendar(); 
+                const savedData = localStorage.getItem(`list-${dateKey}`);
+                if (savedData) {
+                    list.innerHTML = savedData;
+                    App.render.applyColorsToList(list);
                 }
-            }
-        }
 
-        // --- WEEK COPY LOGIC ---
+                // Add recurring events (rendered separately)
+                recurringForDate.forEach(event => {
+                    const row = App.render.createRecurringRow(event, dateKey);
+                    list.appendChild(row);
+                });
 
-        function startCopyWeekMode() {
-            copyWeekState = 'SOURCE';
-            document.getElementById('status-bar').style.display = 'block';
-            document.getElementById('status-bar').innerText = "Select any day in the week you want to COPY FROM...";
-            document.getElementById('btn-copy-week').style.display = 'none';
-            document.getElementById('btn-cancel-week').style.display = 'inline-block';
-        }
+                // If no saved data and no recurring, add empty row
+                if (!savedData && recurringForDate.length === 0) {
+                    App.render.addActivityRow(list);
+                }
 
-        function cancelCopyWeek() {
-            copyWeekState = 'IDLE';
-            copyWeekSourceDate = null;
-            document.getElementById('status-bar').style.display = 'none';
-            document.getElementById('btn-copy-week').style.display = 'inline-block';
-            document.getElementById('btn-cancel-week').style.display = 'none';
-            renderCalendar();
-        }
+                // Restore input values and setup listeners
+                list.querySelectorAll('.time-input').forEach(input => {
+                    if(input.getAttribute('value')) input.value = input.getAttribute('value');
+                    input.addEventListener('change', () => {
+                        input.setAttribute('value', input.value);
+                        App.storage.saveList(list);
+                    });
+                });
 
-        function handleWeekCopyClick(dateKey) {
-            const clickedDate = new Date(dateKey + "T12:00:00"); 
-            const dayOfWeek = clickedDate.getDay(); 
-            const weekStart = new Date(clickedDate);
-            weekStart.setDate(clickedDate.getDate() - dayOfWeek);
+                list.querySelectorAll('.activity-text:not(.recurring-text)').forEach(span => {
+                    App.render.setupTextListeners(span, list);
+                });
 
-            if (copyWeekState === 'SOURCE') {
-                copyWeekSourceDate = weekStart;
-                copyWeekState = 'TARGET';
-                document.getElementById('status-bar').innerText = "Week Copied! Now click any day in the week you want to PASTE TO...";
-                highlightWeek(weekStart, true);
-            } else if (copyWeekState === 'TARGET') {
-                const targetWeekStart = weekStart;
-                performWeekCopy(copyWeekSourceDate, targetWeekStart);
-                cancelCopyWeek();
-            }
-        }
+                // Setup drag handles
+                list.querySelectorAll('.activity-row:not(.recurring-row)').forEach(row => {
+                    App.dragDrop.setupRow(row);
+                });
 
-        function highlightWeek(startDate, isSource) {
-            const grid = document.getElementById('calendar-grid');
-            const cells = grid.querySelectorAll('.day-cell');
-            const datesInWeek = [];
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(startDate);
-                d.setDate(startDate.getDate() + i);
-                datesInWeek.push(d.toISOString().split('T')[0]);
-            }
-            cells.forEach(cell => {
-                if (datesInWeek.includes(cell.dataset.dateKey)) cell.classList.add('is-week-select');
-            });
-        }
+                cell.appendChild(list);
 
-        function performWeekCopy(sourceStart, targetStart) {
-            for (let i = 0; i < 7; i++) {
-                const sDate = new Date(sourceStart); sDate.setDate(sourceStart.getDate() + i);
-                const sKey = sDate.toISOString().split('T')[0];
-                const tDate = new Date(targetStart); tDate.setDate(targetStart.getDate() + i);
-                const tKey = tDate.toISOString().split('T')[0];
-                const sourceData = localStorage.getItem(`list-${sKey}`);
-                if (sourceData) localStorage.setItem(`list-${tKey}`, sourceData);
-            }
-            renderCalendar();
-        }
+                // Allow clicking empty space to focus last item
+                cell.addEventListener('click', (e) => {
+                    if(e.target === cell || e.target === list) {
+                        const rows = list.querySelectorAll('.activity-row:not(.recurring-row)');
+                        if(rows.length > 0) {
+                            const lastText = rows[rows.length-1].querySelector('.activity-text');
+                            if (lastText) lastText.focus();
+                        } else {
+                            App.render.addActivityRow(list);
+                        }
+                    }
+                });
 
-        // --- GENERIC LOGIC ---
+                return cell;
+            },
 
-        function saveList(list) {
-            localStorage.setItem(`list-${list.dataset.date}`, list.innerHTML);
-            applyColorsToList(list);
-        }
+            createRecurringRow: function(event, dateKey) {
+                const row = document.createElement('li');
+                row.className = 'activity-row recurring-row';
+                row.dataset.recurringId = event.id;
+                row.style.cursor = 'pointer';
 
-        function handleInput(e, span) {
-            let text = span.innerText;
-            text = text.trim();
-            showSuggestion(span, text);
-        }
+                const style = App.utils.getStyleForTopic(event.text);
+                if (style) {
+                    row.style.cssText = style;
+                }
 
-        function showSuggestion(span, currentText) {
-            const pattern = flowPatterns[currentText.toLowerCase()];
-            if (pattern && !activeSuggestion) {
-                const sug = document.createElement('span');
-                sug.className = 'suggestion';
-                sug.innerText = " \u2193 " + pattern;
-                span.appendChild(sug);
-                activeSuggestion = pattern;
-            } else if (!pattern && activeSuggestion) {
+                if (event.time) {
+                    const timeSpan = document.createElement('span');
+                    timeSpan.className = 'time-display';
+                    timeSpan.style.cssText = 'font-size: 12pt; margin-right: 5px; opacity: 0.8;';
+                    timeSpan.innerText = event.time;
+                    row.appendChild(timeSpan);
+                }
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'activity-text recurring-text';
+                textSpan.innerText = event.text;
+                row.appendChild(textSpan);
+
+                const badge = document.createElement('span');
+                badge.className = 'recurring-badge';
+                badge.innerText = '&#128260;';
+                badge.title = 'Recurring event';
+                row.appendChild(badge);
+
+                row.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    App.recurring.openInstanceModal(event.id, dateKey, event.text);
+                });
+
+                return row;
+            },
+
+            addActivityRow: function(list, insertAfterRow = null, text = "") {
+                const row = document.createElement('li');
+                row.className = 'activity-row';
+
+                // Add drag handle
+                const handle = document.createElement('span');
+                handle.className = 'drag-handle no-print';
+                handle.innerHTML = '&#8942;&#8942;';
+                handle.title = 'Drag to reorder';
+                row.appendChild(handle);
+
+                const timeInput = document.createElement('input');
+                timeInput.type = 'time';
+                timeInput.className = 'time-input';
+                timeInput.addEventListener('change', () => {
+                    timeInput.setAttribute('value', timeInput.value);
+                    App.storage.saveList(list);
+                });
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'activity-text';
+                textSpan.contentEditable = true;
+                textSpan.innerText = text;
+                textSpan.setAttribute('data-placeholder', 'Plan...');
+
+                App.render.setupTextListeners(textSpan, list);
+
+                row.appendChild(timeInput);
+                row.appendChild(textSpan);
+
+                // Setup drag for new row
+                App.dragDrop.setupRow(row);
+
+                if (insertAfterRow) {
+                    insertAfterRow.after(row);
+                } else {
+                    list.appendChild(row);
+                }
+
+                setTimeout(() => textSpan.focus(), 0);
+
+                if(text) App.utils.autoAssignColor(text);
+
+                return row;
+            },
+
+            setupTextListeners: function(span, list) {
+                span.addEventListener('input', (e) => {
+                    App.render.handleInput(e, span);
+                    App.storage.saveList(list);
+                });
+
+                span.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const text = (e.clipboardData || window.clipboardData).getData('text');
+                    document.execCommand('insertText', false, text);
+                });
+
+                span.addEventListener('blur', () => {
+                    App.storage.saveList(list);
+                });
+
+                span.addEventListener('keydown', (e) => {
+                    if(e.key === 'Enter') {
+                        e.preventDefault();
+                        App.render.addActivityRow(list, span.closest('.activity-row'));
+                        App.render.learnPatterns(list);
+                        if(span.innerText.length > 1) App.utils.autoAssignColor(span.innerText);
+                        App.storage.saveList(list);
+                    }
+                    if(e.key === 'Backspace' && span.innerText === '') {
+                        const rows = list.querySelectorAll('.activity-row:not(.recurring-row)');
+                        if(rows.length > 1) {
+                            e.preventDefault();
+                            const row = span.closest('.activity-row');
+                            const prev = row.previousElementSibling;
+                            row.remove();
+                            if(prev && !prev.classList.contains('recurring-row')) {
+                                const prevText = prev.querySelector('.activity-text');
+                                if (prevText) {
+                                    prevText.focus();
+                                    const range = document.createRange();
+                                    range.selectNodeContents(prevText);
+                                    range.collapse(false);
+                                    const sel = window.getSelection();
+                                    sel.removeAllRanges();
+                                    sel.addRange(range);
+                                }
+                            }
+                            App.storage.saveList(list);
+                        }
+                    }
+                    if(e.key === 'Tab' && App.state.activeSuggestion) {
+                        e.preventDefault();
+                        App.render.acceptSuggestion(span, list);
+                    }
+                });
+            },
+
+            handleInput: function(e, span) {
+                let text = span.innerText.trim();
+                App.render.showSuggestion(span, text);
+            },
+
+            showSuggestion: function(span, currentText) {
+                const pattern = App.state.flowPatterns[currentText.toLowerCase()];
+                if (pattern && !App.state.activeSuggestion) {
+                    const sug = document.createElement('span');
+                    sug.className = 'suggestion';
+                    sug.innerText = " \u2193 " + pattern;
+                    span.appendChild(sug);
+                    App.state.activeSuggestion = pattern;
+                } else if (!pattern && App.state.activeSuggestion) {
+                    const sug = span.querySelector('.suggestion');
+                    if (sug) sug.remove();
+                    App.state.activeSuggestion = null;
+                }
+            },
+
+            acceptSuggestion: function(span, list) {
                 const sug = span.querySelector('.suggestion');
                 if (sug) sug.remove();
-                activeSuggestion = null;
-            }
-        }
 
-        function acceptSuggestion(span, list) {
-            const sug = span.querySelector('.suggestion');
-            if (sug) sug.remove();
-            
-            const row = span.closest('.activity-row');
-            addActivityRow(list, row, activeSuggestion);
-            
-            activeSuggestion = null;
-            saveList(list);
-        }
+                const row = span.closest('.activity-row');
+                App.render.addActivityRow(list, row, App.state.activeSuggestion);
 
-        function learnPatterns(list) {
-            const items = Array.from(list.querySelectorAll('.activity-text')).map(i => i.innerText.trim());
-            for (let i = 0; i < items.length - 1; i++) {
-                if (items[i] && items[i+1]) {
-                    flowPatterns[items[i].toLowerCase()] = items[i+1];
+                App.state.activeSuggestion = null;
+                App.storage.saveList(list);
+            },
+
+            learnPatterns: function(list) {
+                const items = Array.from(list.querySelectorAll('.activity-text:not(.recurring-text)')).map(i => i.innerText.trim());
+                for (let i = 0; i < items.length - 1; i++) {
+                    if (items[i] && items[i+1]) {
+                        App.state.flowPatterns[items[i].toLowerCase()] = items[i+1];
+                    }
                 }
+                localStorage.setItem(App.config.STORAGE_KEYS.FLOW_PATTERNS, JSON.stringify(App.state.flowPatterns));
+            },
+
+            applyColorsToList: function(list) {
+                const rows = list.querySelectorAll('.activity-row:not(.recurring-row)');
+                rows.forEach(row => {
+                    const span = row.querySelector('.activity-text');
+                    if(!span) return;
+                    let text = "";
+                    span.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
+                    text = text.trim().toLowerCase();
+
+                    if (App.state.topicColors[text]) {
+                        const bgColor = App.state.topicColors[text];
+                        row.style.backgroundColor = bgColor;
+                        row.style.color = App.utils.getContrastYIQ(bgColor);
+                        row.style.border = '1px solid black';
+                    } else {
+                        row.style.backgroundColor = 'transparent';
+                        row.style.color = 'inherit';
+                        row.style.border = 'none';
+                    }
+                });
             }
-            localStorage.setItem('ayshe-flow-patterns', JSON.stringify(flowPatterns));
-        }
+        },
 
-        function getContrastYIQ(hexcolor){
-            hexcolor = hexcolor.replace("#", "");
-            if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(c=>c+c).join('');
-            var r = parseInt(hexcolor.substr(0,2),16);
-            var g = parseInt(hexcolor.substr(2,2),16);
-            var b = parseInt(hexcolor.substr(4,2),16);
-            var yiq = ((r*299)+(g*587)+(b*114))/1000;
-            return (yiq >= 128) ? 'black' : 'white';
-        }
-
-        function applyColorsToList(list) {
-            const rows = list.querySelectorAll('.activity-row');
-            rows.forEach(row => {
-                const span = row.querySelector('.activity-text');
-                if(!span) return;
-                let text = "";
-                span.childNodes.forEach(node => { if (node.nodeType === 3) text += node.textContent; });
-                text = text.trim().toLowerCase();
-                
-                if (topicColors[text]) {
-                    const bgColor = topicColors[text];
-                    row.style.backgroundColor = bgColor;
-                    row.style.color = getContrastYIQ(bgColor);
-                    row.style.border = '1px solid black';
+        // --------------------------------------------
+        // EVENTS - Event handlers
+        // --------------------------------------------
+        events: {
+            navigateNext: function() {
+                if (App.state.viewMode === 'MONTH') {
+                    App.state.currentMonth++;
+                    if (App.state.currentMonth > 11) {
+                        App.state.currentMonth = 0;
+                        App.state.currentYear++;
+                    }
                 } else {
-                    row.style.backgroundColor = 'transparent';
-                    row.style.color = 'inherit';
-                    row.style.border = 'none';
+                    App.state.currentWeekStart.setDate(App.state.currentWeekStart.getDate() + 7);
+                    const midWeek = new Date(App.state.currentWeekStart);
+                    midWeek.setDate(midWeek.getDate() + 3);
+                    App.state.currentMonth = midWeek.getMonth();
+                    App.state.currentYear = midWeek.getFullYear();
                 }
-            });
-        }
+                App.render.calendar();
+            },
 
-        function autoAssignColor(topic) {
-            const lowerTopic = topic.toLowerCase();
-            let selectedColor;
-            if (PRESET_COLORS[lowerTopic]) {
-                selectedColor = PRESET_COLORS[lowerTopic];
-            } else {
-                selectedColor = DISTINCT_PALETTE[randomColorIndex % DISTINCT_PALETTE.length];
-                randomColorIndex++; 
+            navigatePrev: function() {
+                if (App.state.viewMode === 'MONTH') {
+                    App.state.currentMonth--;
+                    if (App.state.currentMonth < 0) {
+                        App.state.currentMonth = 11;
+                        App.state.currentYear--;
+                    }
+                } else {
+                    App.state.currentWeekStart.setDate(App.state.currentWeekStart.getDate() - 7);
+                    const midWeek = new Date(App.state.currentWeekStart);
+                    midWeek.setDate(midWeek.getDate() + 3);
+                    App.state.currentMonth = midWeek.getMonth();
+                    App.state.currentYear = midWeek.getFullYear();
+                }
+                App.render.calendar();
+            },
+
+            toggleView: function() {
+                if (App.state.viewMode === 'MONTH') {
+                    App.state.viewMode = 'WEEK';
+                    document.getElementById('btn-view-mode').innerText = "Monthly View";
+                    const today = new Date();
+                    if(today.getFullYear() === App.state.currentYear && today.getMonth() === App.state.currentMonth) {
+                        App.state.currentWeekStart = new Date(today);
+                    } else {
+                        App.state.currentWeekStart = new Date(App.state.currentYear, App.state.currentMonth, 1);
+                    }
+                    App.state.currentWeekStart.setDate(App.state.currentWeekStart.getDate() - App.state.currentWeekStart.getDay());
+                } else {
+                    App.state.viewMode = 'MONTH';
+                    document.getElementById('btn-view-mode').innerText = "Weekly View";
+                    App.state.currentMonth = App.state.currentWeekStart.getMonth();
+                    App.state.currentYear = App.state.currentWeekStart.getFullYear();
+                }
+                App.render.calendar();
+            },
+
+            openEditModal: function(dateKey) {
+                const modal = document.getElementById('edit-day-modal');
+                const overlay = document.getElementById('overlay');
+                const dateInput = document.getElementById('edit-date-key');
+                const typeSelect = document.getElementById('day-type-select');
+                const labelInput = document.getElementById('day-label-input');
+
+                const eventData = App.storage.getEvent(dateKey);
+
+                dateInput.value = dateKey;
+                typeSelect.value = eventData ? eventData.type : "";
+                labelInput.value = eventData ? eventData.text : "";
+
+                modal.style.display = 'block';
+                overlay.style.display = 'block';
+            },
+
+            closeEditModal: function() {
+                document.getElementById('edit-day-modal').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            },
+
+            saveDayStatus: function() {
+                const dateKey = document.getElementById('edit-date-key').value;
+                const type = document.getElementById('day-type-select').value;
+                const text = document.getElementById('day-label-input').value;
+
+                if (type === "" && text === "") {
+                    delete App.state.customEvents[dateKey];
+                } else {
+                    App.state.customEvents[dateKey] = { type: type, text: text };
+                }
+
+                localStorage.setItem(App.config.STORAGE_KEYS.CUSTOM_EVENTS, JSON.stringify(App.state.customEvents));
+                App.events.closeEditModal();
+                App.render.calendar();
+            },
+
+            copyDay: function(btn) {
+                const list = btn.closest('.day-cell').querySelector('.activity-list');
+                if (list) {
+                    // Only copy non-recurring rows
+                    const tempDiv = document.createElement('div');
+                    list.querySelectorAll('.activity-row:not(.recurring-row)').forEach(row => {
+                        tempDiv.appendChild(row.cloneNode(true));
+                    });
+                    App.state.clipboardDay = tempDiv.innerHTML;
+
+                    const origText = btn.innerHTML;
+                    btn.innerHTML = '&#10003;';
+                    btn.classList.add('success-animation');
+                    setTimeout(() => {
+                        btn.innerHTML = origText;
+                        btn.classList.remove('success-animation');
+                    }, 1000);
+                }
+            },
+
+            pasteDay: function(btn) {
+                if (!App.state.clipboardDay) {
+                    alert('Nothing to paste. Copy a day first.');
+                    return;
+                }
+                const list = btn.closest('.day-cell').querySelector('.activity-list');
+                if (list) {
+                    if (confirm("Overwrite this day's activities?")) {
+                        // Remove non-recurring rows
+                        list.querySelectorAll('.activity-row:not(.recurring-row)').forEach(row => row.remove());
+
+                        // Add pasted content
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = App.state.clipboardDay;
+                        tempDiv.querySelectorAll('.activity-row').forEach(row => {
+                            list.insertBefore(row, list.querySelector('.recurring-row'));
+                        });
+
+                        App.storage.saveList(list);
+                        App.render.calendar();
+                    }
+                }
+            },
+
+            startCopyWeekMode: function() {
+                App.state.copyWeekState = 'SOURCE';
+                document.getElementById('status-bar').style.display = 'block';
+                document.getElementById('status-bar').innerText = "Select any day in the week you want to COPY FROM...";
+                document.getElementById('btn-copy-week').style.display = 'none';
+                document.getElementById('btn-cancel-week').style.display = 'inline-block';
+            },
+
+            cancelCopyWeek: function() {
+                App.state.copyWeekState = 'IDLE';
+                App.state.copyWeekSourceDate = null;
+                document.getElementById('status-bar').style.display = 'none';
+                document.getElementById('btn-copy-week').style.display = 'inline-block';
+                document.getElementById('btn-cancel-week').style.display = 'none';
+                App.render.calendar();
+            },
+
+            handleWeekCopyClick: function(dateKey) {
+                const clickedDate = new Date(dateKey + "T12:00:00");
+                const dayOfWeek = clickedDate.getDay();
+                const weekStart = new Date(clickedDate);
+                weekStart.setDate(clickedDate.getDate() - dayOfWeek);
+
+                if (App.state.copyWeekState === 'SOURCE') {
+                    App.state.copyWeekSourceDate = weekStart;
+                    App.state.copyWeekState = 'TARGET';
+                    document.getElementById('status-bar').innerText = "Week Copied! Now click any day in the week you want to PASTE TO...";
+                    App.events.highlightWeek(weekStart, true);
+                } else if (App.state.copyWeekState === 'TARGET') {
+                    const targetWeekStart = weekStart;
+                    App.events.performWeekCopy(App.state.copyWeekSourceDate, targetWeekStart);
+                    App.events.cancelCopyWeek();
+                }
+            },
+
+            highlightWeek: function(startDate, isSource) {
+                const grid = document.getElementById('calendar-grid');
+                const cells = grid.querySelectorAll('.day-cell');
+                const datesInWeek = [];
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(startDate);
+                    d.setDate(startDate.getDate() + i);
+                    datesInWeek.push(d.toISOString().split('T')[0]);
+                }
+                cells.forEach(cell => {
+                    if (datesInWeek.includes(cell.dataset.dateKey)) {
+                        cell.classList.add('is-week-select');
+                    }
+                });
+            },
+
+            performWeekCopy: function(sourceStart, targetStart) {
+                for (let i = 0; i < 7; i++) {
+                    const sDate = new Date(sourceStart);
+                    sDate.setDate(sourceStart.getDate() + i);
+                    const sKey = sDate.toISOString().split('T')[0];
+                    const tDate = new Date(targetStart);
+                    tDate.setDate(targetStart.getDate() + i);
+                    const tKey = tDate.toISOString().split('T')[0];
+                    const sourceData = localStorage.getItem(`list-${sKey}`);
+                    if (sourceData) {
+                        localStorage.setItem(`list-${tKey}`, sourceData);
+                    }
+                }
+                App.render.calendar();
+            },
+
+            openSettingsModal: function() {
+                const modal = document.getElementById('settings-modal');
+                const overlay = document.getElementById('overlay');
+                const apiKeyInput = document.getElementById('settings-api-key');
+
+                apiKeyInput.value = App.storage.getApiKey();
+
+                modal.style.display = 'block';
+                overlay.style.display = 'block';
+            },
+
+            closeSettingsModal: function() {
+                document.getElementById('settings-modal').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            },
+
+            saveSettings: function() {
+                const apiKey = document.getElementById('settings-api-key').value.trim();
+                App.storage.setApiKey(apiKey);
+                App.events.closeSettingsModal();
+                alert('Settings saved!');
+            },
+
+            setupKeyboardShortcuts: function() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === "Escape") {
+                        if(App.state.copyWeekState !== 'IDLE') App.events.cancelCopyWeek();
+                        if(document.getElementById('edit-day-modal').style.display === 'block') App.events.closeEditModal();
+                        if(document.getElementById('magic-plan-modal').style.display === 'block') App.magic.closeModal();
+                        if(document.getElementById('settings-modal').style.display === 'block') App.events.closeSettingsModal();
+                        if(document.getElementById('recurring-modal').style.display === 'block') App.recurring.closeModal();
+                        if(document.getElementById('export-import-modal').style.display === 'block') App.storage.closeExportImportModal();
+                        if(document.getElementById('recurring-instance-modal').style.display === 'block') App.recurring.closeInstanceModal();
+                        return;
+                    }
+                    if (e.target.contentEditable === "true" || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    if (e.key === 'ArrowRight') App.events.navigateNext();
+                    if (e.key === 'ArrowLeft') App.events.navigatePrev();
+                    if (e.key.toLowerCase() === 'p') window.print();
+                    if (e.key === '?') {
+                        alert('Keyboard Shortcuts:\n\n' +
+                              '← / → : Navigate months/weeks\n' +
+                              'P : Print calendar\n' +
+                              'Esc : Close modals\n' +
+                              'Tab : Accept suggestion\n' +
+                              'Enter : New activity row\n' +
+                              'Backspace (on empty) : Delete row');
+                    }
+                });
             }
-            topicColors[lowerTopic] = selectedColor;
-            localStorage.setItem('ayshe-topic-colors', JSON.stringify(topicColors));
-            document.querySelectorAll('.activity-list').forEach(list => applyColorsToList(list));
-        }
+        },
 
-        function clearData() {
-            if(confirm("Are you sure you want to clear all notes and color settings? This cannot be undone.")) {
-                localStorage.clear();
-                location.reload();
+        // --------------------------------------------
+        // DRAG DROP - Drag and drop system
+        // --------------------------------------------
+        dragDrop: {
+            draggedItem: null,
+            sourceList: null,
+            placeholder: null,
+
+            init: function() {
+                // Touch support initialization
+                if ('ontouchstart' in window) {
+                    App.dragDrop.setupTouchSupport();
+                }
+            },
+
+            setupList: function(list) {
+                list.addEventListener('dragover', App.dragDrop.handleDragOver);
+                list.addEventListener('drop', App.dragDrop.handleDrop);
+                list.addEventListener('dragleave', App.dragDrop.handleDragLeave);
+            },
+
+            setupRow: function(row) {
+                row.draggable = true;
+                row.addEventListener('dragstart', App.dragDrop.handleDragStart);
+                row.addEventListener('dragend', App.dragDrop.handleDragEnd);
+            },
+
+            handleDragStart: function(e) {
+                App.dragDrop.draggedItem = this;
+                App.dragDrop.sourceList = this.closest('.activity-list');
+
+                this.classList.add('dragging');
+
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', this.outerHTML);
+
+                // Highlight all drop zones
+                document.querySelectorAll('.activity-list').forEach(list => {
+                    list.style.minHeight = '80px';
+                });
+            },
+
+            handleDragOver: function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+
+                const list = this;
+                const cell = list.closest('.day-cell');
+                if (cell) cell.classList.add('drag-over');
+
+                // Find the element we're hovering over
+                const afterElement = App.dragDrop.getDragAfterElement(list, e.clientY);
+                const dragging = App.dragDrop.draggedItem;
+
+                if (dragging) {
+                    if (afterElement == null) {
+                        // Append to end (but before recurring rows)
+                        const firstRecurring = list.querySelector('.recurring-row');
+                        if (firstRecurring) {
+                            list.insertBefore(dragging, firstRecurring);
+                        } else {
+                            list.appendChild(dragging);
+                        }
+                    } else {
+                        list.insertBefore(dragging, afterElement);
+                    }
+                }
+            },
+
+            handleDrop: function(e) {
+                e.preventDefault();
+
+                const list = this;
+                const cell = list.closest('.day-cell');
+                if (cell) cell.classList.remove('drag-over');
+
+                if (App.dragDrop.draggedItem) {
+                    // Save both source and target lists
+                    if (App.dragDrop.sourceList) {
+                        App.storage.saveList(App.dragDrop.sourceList);
+                    }
+                    App.storage.saveList(list);
+
+                    // Re-setup listeners for the moved item
+                    const textSpan = App.dragDrop.draggedItem.querySelector('.activity-text');
+                    if (textSpan) {
+                        App.render.setupTextListeners(textSpan, list);
+                    }
+                }
+            },
+
+            handleDragLeave: function(e) {
+                const cell = this.closest('.day-cell');
+                if (cell && !cell.contains(e.relatedTarget)) {
+                    cell.classList.remove('drag-over');
+                }
+            },
+
+            handleDragEnd: function(e) {
+                this.classList.remove('dragging');
+
+                document.querySelectorAll('.day-cell').forEach(cell => {
+                    cell.classList.remove('drag-over');
+                });
+
+                document.querySelectorAll('.activity-list').forEach(list => {
+                    list.style.minHeight = '';
+                });
+
+                App.dragDrop.draggedItem = null;
+                App.dragDrop.sourceList = null;
+            },
+
+            getDragAfterElement: function(container, y) {
+                const draggableElements = [...container.querySelectorAll('.activity-row:not(.dragging):not(.recurring-row)')];
+
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            },
+
+            setupTouchSupport: function() {
+                let touchStartY = 0;
+                let touchedItem = null;
+                let touchTimeout = null;
+
+                document.addEventListener('touchstart', (e) => {
+                    const handle = e.target.closest('.drag-handle');
+                    if (handle) {
+                        touchedItem = handle.closest('.activity-row');
+                        touchStartY = e.touches[0].clientY;
+
+                        touchTimeout = setTimeout(() => {
+                            if (touchedItem) {
+                                touchedItem.classList.add('dragging');
+                                App.dragDrop.draggedItem = touchedItem;
+                                App.dragDrop.sourceList = touchedItem.closest('.activity-list');
+                            }
+                        }, 200);
+                    }
+                }, { passive: true });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (App.dragDrop.draggedItem) {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const elementUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const list = elementUnder ? elementUnder.closest('.activity-list') : null;
+
+                        if (list) {
+                            const afterElement = App.dragDrop.getDragAfterElement(list, touch.clientY);
+                            if (afterElement == null) {
+                                const firstRecurring = list.querySelector('.recurring-row');
+                                if (firstRecurring) {
+                                    list.insertBefore(App.dragDrop.draggedItem, firstRecurring);
+                                } else {
+                                    list.appendChild(App.dragDrop.draggedItem);
+                                }
+                            } else {
+                                list.insertBefore(App.dragDrop.draggedItem, afterElement);
+                            }
+                        }
+                    }
+                }, { passive: false });
+
+                document.addEventListener('touchend', (e) => {
+                    clearTimeout(touchTimeout);
+
+                    if (App.dragDrop.draggedItem) {
+                        App.dragDrop.draggedItem.classList.remove('dragging');
+
+                        const list = App.dragDrop.draggedItem.closest('.activity-list');
+                        if (list) {
+                            App.storage.saveList(list);
+                        }
+                        if (App.dragDrop.sourceList && App.dragDrop.sourceList !== list) {
+                            App.storage.saveList(App.dragDrop.sourceList);
+                        }
+
+                        App.dragDrop.draggedItem = null;
+                        App.dragDrop.sourceList = null;
+                    }
+
+                    touchedItem = null;
+                }, { passive: true });
             }
-        }
+        },
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === "Escape") {
-                if(copyWeekState !== 'IDLE') cancelCopyWeek();
-                if(document.getElementById('edit-day-modal').style.display === 'block') closeEditModal();
-                if(document.getElementById('magic-plan-modal').style.display === 'block') closeMagicModal();
-                return;
+        // --------------------------------------------
+        // RECURRING - Recurring events system
+        // --------------------------------------------
+        recurring: {
+            patterns: [],
+            deletedInstances: {},
+
+            load: function() {
+                App.recurring.patterns = JSON.parse(localStorage.getItem(App.config.STORAGE_KEYS.RECURRING_EVENTS)) || [];
+                App.recurring.deletedInstances = JSON.parse(localStorage.getItem(App.config.STORAGE_KEYS.DELETED_INSTANCES)) || {};
+            },
+
+            save: function() {
+                localStorage.setItem(App.config.STORAGE_KEYS.RECURRING_EVENTS, JSON.stringify(App.recurring.patterns));
+                localStorage.setItem(App.config.STORAGE_KEYS.DELETED_INSTANCES, JSON.stringify(App.recurring.deletedInstances));
+            },
+
+            generateId: function() {
+                return 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            },
+
+            add: function() {
+                const text = document.getElementById('recurring-text').value.trim();
+                const time = document.getElementById('recurring-time').value;
+                const pattern = document.getElementById('recurring-pattern').value;
+                const startDate = document.getElementById('recurring-start').value;
+                const endDate = document.getElementById('recurring-end').value;
+
+                const days = [];
+                document.querySelectorAll('#recurring-days-row input:checked').forEach(cb => {
+                    days.push(parseInt(cb.value));
+                });
+
+                if (!text) {
+                    alert('Please enter an activity name.');
+                    return;
+                }
+
+                if (pattern !== 'monthly' && days.length === 0) {
+                    alert('Please select at least one day of the week.');
+                    return;
+                }
+
+                if (!startDate) {
+                    alert('Please select a start date.');
+                    return;
+                }
+
+                const newPattern = {
+                    id: App.recurring.generateId(),
+                    text: text,
+                    time: time,
+                    pattern: pattern,
+                    days: days,
+                    startDate: startDate,
+                    endDate: endDate || null
+                };
+
+                App.recurring.patterns.push(newPattern);
+                App.recurring.save();
+
+                // Auto-assign color
+                App.utils.autoAssignColor(text);
+
+                App.recurring.closeModal();
+                App.render.calendar();
+                alert('Recurring event added!');
+            },
+
+            getEventsForDate: function(dateKey) {
+                const events = [];
+                const date = new Date(dateKey + 'T12:00:00');
+                const dayOfWeek = date.getDay();
+                const dayOfMonth = date.getDate();
+
+                App.recurring.patterns.forEach(pattern => {
+                    // Check if this instance was deleted
+                    const instanceKey = `${pattern.id}_${dateKey}`;
+                    if (App.recurring.deletedInstances[instanceKey]) {
+                        return;
+                    }
+
+                    const startDate = new Date(pattern.startDate + 'T00:00:00');
+                    const endDate = pattern.endDate ? new Date(pattern.endDate + 'T23:59:59') : null;
+
+                    // Check date range
+                    if (date < startDate) return;
+                    if (endDate && date > endDate) return;
+
+                    let matches = false;
+
+                    if (pattern.pattern === 'weekly') {
+                        matches = pattern.days.includes(dayOfWeek);
+                    } else if (pattern.pattern === 'biweekly') {
+                        const weeksDiff = Math.floor((date - startDate) / (7 * 24 * 60 * 60 * 1000));
+                        matches = pattern.days.includes(dayOfWeek) && weeksDiff % 2 === 0;
+                    } else if (pattern.pattern === 'monthly') {
+                        const startDayOfMonth = new Date(pattern.startDate + 'T12:00:00').getDate();
+                        matches = dayOfMonth === startDayOfMonth;
+                    }
+
+                    if (matches) {
+                        events.push({
+                            id: pattern.id,
+                            text: pattern.text,
+                            time: pattern.time
+                        });
+                    }
+                });
+
+                return events;
+            },
+
+            openModal: function() {
+                const modal = document.getElementById('recurring-modal');
+                const overlay = document.getElementById('overlay');
+
+                // Reset form
+                document.getElementById('recurring-text').value = '';
+                document.getElementById('recurring-time').value = '';
+                document.getElementById('recurring-pattern').value = 'weekly';
+                document.getElementById('recurring-start').value = '';
+                document.getElementById('recurring-end').value = '';
+                document.querySelectorAll('#recurring-days-row input').forEach(cb => cb.checked = false);
+                document.getElementById('recurring-preview').style.display = 'none';
+
+                // Render existing patterns
+                App.recurring.renderList();
+
+                modal.style.display = 'block';
+                overlay.style.display = 'block';
+            },
+
+            closeModal: function() {
+                document.getElementById('recurring-modal').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            },
+
+            renderList: function() {
+                const container = document.getElementById('recurring-list');
+
+                if (App.recurring.patterns.length === 0) {
+                    container.innerHTML = '<p style="color: #666; font-size: 12pt;">No recurring events configured.</p>';
+                    return;
+                }
+
+                let html = '<strong>Existing Recurring Events:</strong><div style="margin-top: 10px;">';
+
+                App.recurring.patterns.forEach(pattern => {
+                    const daysText = pattern.pattern === 'monthly'
+                        ? 'Monthly'
+                        : pattern.days.map(d => App.config.WEEKDAYS[d]).join(', ');
+
+                    html += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 5px;">
+                            <div>
+                                <strong>${pattern.text}</strong>
+                                ${pattern.time ? `<span style="opacity: 0.7;"> @ ${pattern.time}</span>` : ''}
+                                <br>
+                                <small style="color: #666;">${pattern.pattern} - ${daysText}</small>
+                            </div>
+                            <button class="btn btn-danger" onclick="App.recurring.deletePattern('${pattern.id}')" style="font-size: 10pt; padding: 4px 8px;">Delete</button>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            },
+
+            deletePattern: function(id) {
+                if (confirm('Delete this recurring event? This will remove all instances.')) {
+                    App.recurring.patterns = App.recurring.patterns.filter(p => p.id !== id);
+                    App.recurring.save();
+                    App.recurring.renderList();
+                    App.render.calendar();
+                }
+            },
+
+            preview: function() {
+                const pattern = document.getElementById('recurring-pattern').value;
+                const startDate = document.getElementById('recurring-start').value;
+                const endDate = document.getElementById('recurring-end').value;
+                const days = [];
+                document.querySelectorAll('#recurring-days-row input:checked').forEach(cb => {
+                    days.push(parseInt(cb.value));
+                });
+
+                if (!startDate) {
+                    alert('Please select a start date to preview.');
+                    return;
+                }
+
+                if (pattern !== 'monthly' && days.length === 0) {
+                    alert('Please select at least one day to preview.');
+                    return;
+                }
+
+                const previewDates = [];
+                const start = new Date(startDate + 'T12:00:00');
+                const end = endDate ? new Date(endDate + 'T12:00:00') : new Date(start);
+                if (!endDate) {
+                    end.setMonth(end.getMonth() + 3); // Preview 3 months ahead
+                }
+
+                let current = new Date(start);
+                let count = 0;
+                const maxPreview = 20;
+
+                while (current <= end && count < maxPreview) {
+                    let matches = false;
+                    const dayOfWeek = current.getDay();
+
+                    if (pattern === 'weekly') {
+                        matches = days.includes(dayOfWeek);
+                    } else if (pattern === 'biweekly') {
+                        const weeksDiff = Math.floor((current - start) / (7 * 24 * 60 * 60 * 1000));
+                        matches = days.includes(dayOfWeek) && weeksDiff % 2 === 0;
+                    } else if (pattern === 'monthly') {
+                        matches = current.getDate() === start.getDate();
+                    }
+
+                    if (matches) {
+                        previewDates.push(current.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                        }));
+                        count++;
+                    }
+
+                    current.setDate(current.getDate() + 1);
+                }
+
+                const previewContainer = document.getElementById('recurring-preview');
+                const previewList = document.getElementById('recurring-preview-list');
+
+                if (previewDates.length > 0) {
+                    previewList.innerHTML = previewDates.map(d => `<div class="preview-list-item">${d}</div>`).join('');
+                    if (count >= maxPreview) {
+                        previewList.innerHTML += `<div class="preview-list-item" style="font-style: italic;">... and more</div>`;
+                    }
+                } else {
+                    previewList.innerHTML = '<div class="preview-list-item">No dates match the criteria.</div>';
+                }
+
+                previewContainer.style.display = 'block';
+            },
+
+            openInstanceModal: function(id, dateKey, text) {
+                document.getElementById('recurring-instance-id').value = id;
+                document.getElementById('recurring-instance-date').value = dateKey;
+                document.getElementById('recurring-instance-text').innerText = `"${text}" on ${new Date(dateKey + 'T12:00:00').toLocaleDateString()}`;
+                document.getElementById('recurring-instance-modal').style.display = 'block';
+                document.getElementById('overlay').style.display = 'block';
+            },
+
+            closeInstanceModal: function() {
+                document.getElementById('recurring-instance-modal').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            },
+
+            deleteInstance: function() {
+                const id = document.getElementById('recurring-instance-id').value;
+                const dateKey = document.getElementById('recurring-instance-date').value;
+                const instanceKey = `${id}_${dateKey}`;
+
+                App.recurring.deletedInstances[instanceKey] = true;
+                App.recurring.save();
+                App.recurring.closeInstanceModal();
+                App.render.calendar();
+            },
+
+            deleteAll: function() {
+                const id = document.getElementById('recurring-instance-id').value;
+
+                if (confirm('Delete all occurrences of this recurring event?')) {
+                    App.recurring.patterns = App.recurring.patterns.filter(p => p.id !== id);
+
+                    // Also clean up deleted instances for this pattern
+                    Object.keys(App.recurring.deletedInstances).forEach(key => {
+                        if (key.startsWith(id + '_')) {
+                            delete App.recurring.deletedInstances[key];
+                        }
+                    });
+
+                    App.recurring.save();
+                    App.recurring.closeInstanceModal();
+                    App.render.calendar();
+                }
             }
-            if (e.target.contentEditable === "true" || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            if (e.key === 'ArrowRight') navigateNext();
-            if (e.key === 'ArrowLeft') navigatePrev();
-            if (e.key.toLowerCase() === 'p') window.print();
-        });
+        },
 
-        renderCalendar();
+        // --------------------------------------------
+        // MAGIC - Gemini API integration
+        // --------------------------------------------
+        magic: {
+            openModal: function() {
+                const apiKey = App.storage.getApiKey();
+                const warning = document.getElementById('api-key-warning');
+                const generateBtn = document.getElementById('btn-generate-plan');
+
+                if (!apiKey) {
+                    warning.style.display = 'block';
+                    generateBtn.disabled = true;
+                    generateBtn.style.opacity = '0.5';
+                } else {
+                    warning.style.display = 'none';
+                    generateBtn.disabled = false;
+                    generateBtn.style.opacity = '1';
+                }
+
+                document.getElementById('magic-plan-modal').style.display = 'block';
+                document.getElementById('overlay').style.display = 'block';
+                document.getElementById('magic-prompt').focus();
+            },
+
+            closeModal: function() {
+                document.getElementById('magic-plan-modal').style.display = 'none';
+                document.getElementById('overlay').style.display = 'none';
+            },
+
+            async generatePlan() {
+                const apiKey = App.storage.getApiKey();
+                if (!apiKey) {
+                    alert('Please configure your Gemini API key in Settings first.');
+                    return;
+                }
+
+                const prompt = document.getElementById('magic-prompt').value;
+                if(!prompt) return;
+
+                const loading = document.getElementById('magic-loading');
+                loading.classList.remove('hidden');
+
+                const currentViewDate = new Date(App.state.currentYear, App.state.currentMonth, 1);
+                const viewName = currentViewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+                const systemPrompt = `You are a scheduling assistant. The user is planning specifically for ${viewName}.
+                Return a JSON object where keys are dates in 'YYYY-MM-DD' format and values are ARRAYS of objects.
+                Each object should have 'time' (HH:MM or empty string) and 'text' (activity description).
+                Example: {"2025-02-14": [{"time": "14:00", "text": "Valentine's Party"}], "2025-02-17": [{"time": "", "text": "No School"}]}
+                Do not format as markdown. Return raw JSON only.`;
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(`API Error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (!data.candidates || !data.candidates[0].content) {
+                        throw new Error("No plan generated. Try a different description.");
+                    }
+
+                    const text = data.candidates[0].content.parts[0].text;
+                    let cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+                    const firstBrace = cleanJson.indexOf('{');
+                    const lastBrace = cleanJson.lastIndexOf('}');
+                    if (firstBrace !== -1 && lastBrace !== -1) {
+                        cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+                    }
+
+                    const schedule = JSON.parse(cleanJson);
+
+                    for (const dateKey in schedule) {
+                        const items = schedule[dateKey];
+                        let newRowsHtml = '';
+
+                        if (Array.isArray(items)) {
+                            items.forEach(item => {
+                                let itemText = "";
+                                let itemTime = "";
+
+                                if (typeof item === 'string') {
+                                    itemText = item;
+                                } else {
+                                    itemText = item.text || "";
+                                    itemTime = item.time || "";
+                                }
+
+                                if (!itemText) return;
+
+                                App.utils.autoAssignColor(itemText);
+
+                                const valAttr = itemTime ? `value="${itemTime}"` : '';
+                                newRowsHtml += `<li class="activity-row" style="${App.utils.getStyleForTopic(itemText)}">
+                                    <span class="drag-handle no-print">&#8942;&#8942;</span>
+                                    <input type="time" class="time-input" ${valAttr}>
+                                    <span class="activity-text" contenteditable="true" data-placeholder="Plan...">${itemText}</span>
+                                </li>`;
+                            });
+                        }
+
+                        if (newRowsHtml) {
+                            const existing = localStorage.getItem(`list-${dateKey}`) || '';
+                            const div = document.createElement('div');
+                            div.innerHTML = existing;
+
+                            const existingRow = div.querySelector('.activity-row');
+                            const existingText = div.querySelector('.activity-text');
+
+                            if(existingRow && existingText && existingText.innerText.trim() === '') {
+                                 div.innerHTML = newRowsHtml;
+                            } else {
+                                 div.innerHTML += newRowsHtml;
+                            }
+                            localStorage.setItem(`list-${dateKey}`, div.innerHTML);
+                        }
+                    }
+
+                    App.magic.closeModal();
+                    App.render.calendar();
+                    alert("Plan generated successfully!");
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Magic Plan Error: " + error.message);
+                } finally {
+                    loading.classList.add('hidden');
+                }
+            }
+        },
+
+        // --------------------------------------------
+        // UTILS - Helper functions
+        // --------------------------------------------
+        utils: {
+            getContrastYIQ: function(hexcolor) {
+                hexcolor = hexcolor.replace("#", "");
+                if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(c=>c+c).join('');
+                var r = parseInt(hexcolor.substr(0,2),16);
+                var g = parseInt(hexcolor.substr(2,2),16);
+                var b = parseInt(hexcolor.substr(4,2),16);
+                var yiq = ((r*299)+(g*587)+(b*114))/1000;
+                return (yiq >= 128) ? 'black' : 'white';
+            },
+
+            autoAssignColor: function(topic) {
+                const lowerTopic = topic.toLowerCase();
+                if (App.state.topicColors[lowerTopic]) return; // Already has color
+
+                let selectedColor;
+                if (App.config.PRESET_COLORS[lowerTopic]) {
+                    selectedColor = App.config.PRESET_COLORS[lowerTopic];
+                } else {
+                    selectedColor = App.config.DISTINCT_PALETTE[App.state.randomColorIndex % App.config.DISTINCT_PALETTE.length];
+                    App.state.randomColorIndex++;
+                }
+                App.state.topicColors[lowerTopic] = selectedColor;
+                localStorage.setItem(App.config.STORAGE_KEYS.TOPIC_COLORS, JSON.stringify(App.state.topicColors));
+                document.querySelectorAll('.activity-list').forEach(list => App.render.applyColorsToList(list));
+            },
+
+            getStyleForTopic: function(text) {
+                const lower = text.trim().toLowerCase();
+                if(App.state.topicColors[lower]) {
+                    const bg = App.state.topicColors[lower];
+                    const color = App.utils.getContrastYIQ(bg);
+                    return `background-color: ${bg}; color: ${color}; border: 1px solid black;`;
+                }
+                return "";
+            }
+        },
+
+        // --------------------------------------------
+        // INIT - Application initialization
+        // --------------------------------------------
+        init: function() {
+            App.storage.init();
+            App.recurring.load();
+            App.dragDrop.init();
+            App.events.setupKeyboardShortcuts();
+
+            // Set initial week start
+            App.state.currentWeekStart.setDate(App.state.currentWeekStart.getDate() - App.state.currentWeekStart.getDay());
+
+            App.render.calendar();
+        }
+    };
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', App.init);
+
+    // Also run init immediately if DOM is already ready
+    if (document.readyState !== 'loading') {
+        App.init();
+    }
     </script>
 </body>
 </html>
