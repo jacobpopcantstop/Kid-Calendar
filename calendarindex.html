@@ -9,10 +9,22 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
 
+        /* Global Box Sizing Fix */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Comic Neue', cursive, sans-serif;
             font-size: 25pt;
             overflow-x: hidden;
+            margin: 0;
+            padding: 1rem;
+        }
+
+        /* Fixed Shadow Utility */
+        .shadow-neo {
+            box-shadow: 6px 6px 0px 0px rgba(0,0,0,1) !important;
         }
 
         /* Prevent text from running over boxes */
@@ -21,6 +33,7 @@
             overflow-wrap: anywhere;
             hyphens: auto;
             line-height: 1.2;
+            width: 100%;
         }
 
         /* Maintain grid integrity with scrollable day content */
@@ -28,10 +41,7 @@
             max-height: 250px;
             overflow-y: auto;
             scrollbar-width: thin;
-        }
-
-        .shadow-neo {
-            box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
+            padding-right: 4px;
         }
 
         /* Custom scrollbar for large text accessibility */
@@ -47,13 +57,19 @@
             border: 3px solid #f1f1f1;
         }
 
+        /* Ensure grid cells are equal and don't overflow */
+        .calendar-grid-container {
+            display: grid;
+            grid-template-cols: repeat(7, 1fr);
+            width: 100%;
+        }
+
         @media print {
             .print-hidden { display: none !important; }
             .page-break { page-break-after: always; display: block !important; }
-            body { background: white !important; font-size: 18pt !important; }
-            .calendar-container { border: none !important; shadow: none !important; }
-            * { -webkit-print-color-adjust: exact !important; }
+            body { background: white !important; font-size: 18pt !important; padding: 0 !important; }
             .day-content-area { max-height: none !important; overflow: visible !important; }
+            main { border: 4px solid black !important; }
         }
 
         select {
@@ -65,38 +81,38 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 p-4 min-h-screen">
+<body class="bg-slate-50 text-slate-900">
 
     <div id="app">
         <!-- Toolbar -->
         <header class="max-w-7xl mx-auto mb-8 space-y-6 print-hidden">
             <div class="flex flex-wrap items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
-                    <div class="bg-blue-600 p-3 rounded-2xl border-4 border-black">
+                    <div class="bg-blue-600 p-3 rounded-2xl border-4 border-black shadow-neo">
                         <i data-lucide="calendar" class="text-white w-12 h-12"></i>
                     </div>
                     <h1 class="text-6xl font-black tracking-tight">Big Calendar</h1>
                 </div>
 
                 <div class="flex gap-4">
-                    <button onclick="toggleModal(true)" class="px-8 py-5 bg-green-500 text-white border-4 border-black rounded-3xl font-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none flex items-center gap-3">
+                    <button onclick="toggleModal(true)" class="px-8 py-5 bg-green-500 text-white border-4 border-black rounded-3xl font-black shadow-neo active:translate-y-1 active:shadow-none flex items-center gap-3">
                         <i data-lucide="plus" class="w-10 h-10"></i> ADD EVENT
                     </button>
-                    <button onclick="window.print()" class="px-8 py-5 bg-blue-500 text-white border-4 border-black rounded-3xl font-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3">
+                    <button onclick="window.print()" class="px-8 py-5 bg-blue-500 text-white border-4 border-black rounded-3xl font-black shadow-neo flex items-center gap-3">
                         <i data-lucide="printer" class="w-10 h-10"></i> PRINT
                     </button>
                 </div>
             </div>
 
-            <div class="flex flex-wrap items-center justify-between bg-white border-8 border-black p-6 rounded-[40px] gap-6">
+            <div class="flex flex-wrap items-center justify-between bg-white border-8 border-black p-6 rounded-[40px] gap-6 shadow-neo">
                 <div class="flex items-center gap-4">
-                    <button onclick="changeDate(-1)" class="p-4 border-4 border-black rounded-2xl hover:bg-slate-100">
+                    <button onclick="changeDate(-1)" class="p-4 border-4 border-black rounded-2xl hover:bg-slate-100 transition-colors">
                         <i data-lucide="chevron-left" class="w-12 h-12"></i>
                     </button>
                     <div id="current-month-display" class="text-center min-w-[350px] font-black text-4xl uppercase underline decoration-yellow-400 decoration-8 underline-offset-8">
                         Loading...
                     </div>
-                    <button onclick="changeDate(1)" class="p-4 border-4 border-black rounded-2xl hover:bg-slate-100">
+                    <button onclick="changeDate(1)" class="p-4 border-4 border-black rounded-2xl hover:bg-slate-100 transition-colors">
                         <i data-lucide="chevron-right" class="w-12 h-12"></i>
                     </button>
                 </div>
@@ -113,23 +129,23 @@
         </header>
 
         <!-- Calendar Main -->
-        <main class="max-w-7xl mx-auto bg-white border-8 border-black rounded-[40px] overflow-hidden shadow-[15px_15px_0px_0px_rgba(0,0,0,0.1)] print:border-none print:shadow-none">
+        <main class="max-w-7xl mx-auto bg-white border-8 border-black rounded-[40px] overflow-hidden shadow-neo print:shadow-none">
             <!-- Headers -->
-            <div class="grid grid-cols-7 border-b-8 border-black bg-slate-100" id="weekday-headers">
+            <div class="calendar-grid-container border-b-8 border-black bg-slate-100" id="weekday-headers">
                 <!-- Injected via JS -->
             </div>
             <!-- Grid -->
-            <div class="grid grid-cols-7" id="calendar-grid">
+            <div class="calendar-grid-container" id="calendar-grid">
                 <!-- Injected via JS -->
             </div>
         </main>
 
         <!-- Task Modal -->
         <div id="task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-            <div class="bg-white border-[10px] border-black rounded-[50px] w-full max-w-3xl overflow-hidden shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]">
+            <div class="bg-white border-[10px] border-black rounded-[50px] w-full max-w-3xl overflow-hidden shadow-neo">
                 <div class="p-10 bg-yellow-400 border-b-8 border-black flex justify-between items-center">
                     <h2 class="text-6xl font-black">Add Event</h2>
-                    <button onclick="toggleModal(false)" class="p-4 bg-white border-4 border-black rounded-full hover:bg-red-400">
+                    <button onclick="toggleModal(false)" class="p-4 bg-white border-4 border-black rounded-full hover:bg-red-400 transition-colors">
                         <i data-lucide="x" class="w-12 h-12"></i>
                     </button>
                 </div>
@@ -159,7 +175,7 @@
                             <!-- Injected via JS -->
                         </div>
                     </div>
-                    <button onclick="saveTask()" class="w-full py-10 bg-green-500 text-white border-8 border-black rounded-[40px] text-6xl font-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-2 uppercase">
+                    <button onclick="saveTask()" class="w-full py-10 bg-green-500 text-white border-8 border-black rounded-[40px] text-6xl font-black shadow-neo active:shadow-none active:translate-y-2 uppercase">
                         Save Event
                     </button>
                 </div>
@@ -171,7 +187,6 @@
     </div>
 
     <script>
-        // Constants
         const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const CATEGORIES = [
             { id: 'work', label: 'Work', bg: '#dbeafe', border: '#1e40af' },
@@ -180,7 +195,6 @@
             { id: 'urgent', label: 'Urgent', bg: '#fee2e2', border: '#991b1b' },
         ];
 
-        // State
         let currentDate = new Date();
         let currentView = 'monthly';
         let tasks = JSON.parse(localStorage.getItem('accessible_calendar_v2_html')) || getInitialTasks();
@@ -191,23 +205,20 @@
             const year = now.getFullYear();
             const month = now.getMonth();
             return [
-                { id: '1', title: 'Morning Walk Around The Park For Fresh Air', date: new Date(year, month, 1).toISOString().split('T')[0], category: 'personal', recurrence: 'daily' },
-                { id: '2', title: 'Very Long Weekly Sync Meeting Title That Needs To Wrap Correctly', date: new Date(year, month, 5).toISOString().split('T')[0], category: 'work', recurrence: 'weekly' },
+                { id: '1', title: 'Morning Walk', date: new Date(year, month, 1).toISOString().split('T')[0], category: 'personal', recurrence: 'daily' },
+                { id: '2', title: 'Weekly Sync', date: new Date(year, month, 5).toISOString().split('T')[0], category: 'work', recurrence: 'weekly' },
                 { id: '3', title: 'Health Check', date: new Date(year, month, 15).toISOString().split('T')[0], category: 'medical', recurrence: 'none' },
-                { id: '4', title: 'Pay All Utility Bills', date: new Date(year, month, 1).toISOString().split('T')[0], category: 'urgent', recurrence: 'monthly' }
+                { id: '4', title: 'Pay Bills', date: new Date(year, month, 1).toISOString().split('T')[0], category: 'urgent', recurrence: 'monthly' }
             ];
         }
 
-        // Logic
         function setView(view) {
             currentView = view;
-            document.getElementById('view-monthly').classList.toggle('opacity-60', view !== 'monthly');
-            document.getElementById('view-monthly').classList.toggle('shadow-md', view === 'monthly');
-            document.getElementById('view-monthly').classList.toggle('bg-white', view === 'monthly');
+            const btnMonthly = document.getElementById('view-monthly');
+            const btnWeekly = document.getElementById('view-weekly');
             
-            document.getElementById('view-weekly').classList.toggle('opacity-60', view !== 'weekly');
-            document.getElementById('view-weekly').classList.toggle('shadow-md', view === 'weekly');
-            document.getElementById('view-weekly').classList.toggle('bg-white', view === 'weekly');
+            btnMonthly.className = `flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${view === 'monthly' ? 'bg-white shadow-md' : 'opacity-60'}`;
+            btnWeekly.className = `flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${view === 'weekly' ? 'bg-white shadow-md' : 'opacity-60'}`;
             
             render();
         }
@@ -244,22 +255,22 @@
         }
 
         function saveTask() {
-            const title = document.getElementById('task-title').value;
-            const date = document.getElementById('task-date').value;
-            const recurrence = document.getElementById('task-recurrence').value;
+            const titleInput = document.getElementById('task-title');
+            const dateInput = document.getElementById('task-date');
+            const recurrenceInput = document.getElementById('task-recurrence');
             
-            if (!title) return;
+            if (!titleInput.value) return;
 
             tasks.push({
                 id: Date.now().toString(),
-                title,
-                date,
+                title: titleInput.value,
+                date: dateInput.value,
                 category: selectedCategory,
-                recurrence
+                recurrence: recurrenceInput.value
             });
 
             localStorage.setItem('accessible_calendar_v2_html', JSON.stringify(tasks));
-            document.getElementById('task-title').value = '';
+            titleInput.value = '';
             toggleModal(false);
             render();
         }
@@ -307,17 +318,14 @@
                 const offset = firstDay.getDay();
                 const days = [];
                 
-                // Prev Month Padding
                 for (let i = 0; i < offset; i++) {
                     const d = new Date(year, month, 1 - (offset - i));
                     days.push({ date: d, currentMonth: false });
                 }
-                // Current Month
                 const daysInMonth = new Date(year, month + 1, 0).getDate();
                 for (let i = 1; i <= daysInMonth; i++) {
                     days.push({ date: new Date(year, month, i), currentMonth: true });
                 }
-                // Next Month Padding
                 const total = Math.ceil(days.length / 7) * 7;
                 const remaining = total - days.length;
                 for (let i = 1; i <= remaining; i++) {
@@ -329,11 +337,9 @@
         }
 
         function render() {
-            // Header display
             const display = document.getElementById('current-month-display');
             display.innerText = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' }) + (currentView === 'weekly' ? ' (Week)' : '');
 
-            // Weekday Headers
             const headerRow = document.getElementById('weekday-headers');
             headerRow.innerHTML = DAYS.map((day, i) => `
                 <div class="p-6 text-center font-black border-r-4 last:border-r-0 border-black ${i === 0 || i === 6 ? 'bg-slate-200 text-slate-500' : ''}">
@@ -341,11 +347,11 @@
                 </div>
             `).join('');
 
-            // Grid
             const grid = document.getElementById('calendar-grid');
             const daysToDisplay = generateDays();
             
-            grid.className = `grid grid-cols-7 ${currentView === 'weekly' ? 'auto-rows-[600px]' : 'auto-rows-[minmax(220px,auto)]'}`;
+            // Fixed styling for grid rows
+            const rowStyle = currentView === 'weekly' ? 'min-height: 600px;' : 'min-height: 220px;';
             
             grid.innerHTML = daysToDisplay.map((dayObj, idx) => {
                 const dateTasks = getTasksForDate(dayObj.date);
@@ -353,7 +359,7 @@
                 const isWeekend = dayObj.date.getDay() === 0 || dayObj.date.getDay() === 6;
 
                 return `
-                    <div class="relative border-r-4 border-b-4 border-black p-3 ${!dayObj.currentMonth ? 'bg-slate-50 text-slate-300' : 'bg-white'} ${isWeekend ? 'bg-slate-100/50' : ''} ${isToday ? 'bg-yellow-50' : ''}">
+                    <div style="${rowStyle}" class="relative border-r-4 border-b-4 border-black p-3 ${!dayObj.currentMonth ? 'bg-slate-50 text-slate-300' : 'bg-white'} ${isWeekend ? 'bg-slate-100/50' : ''} ${isToday ? 'bg-yellow-50' : ''}">
                         <div class="flex justify-between items-start mb-4">
                             <span class="w-12 h-12 flex items-center justify-center rounded-full font-black text-4xl ${isToday ? 'bg-yellow-400 border-4 border-black' : ''}">
                                 ${dayObj.date.getDate()}
@@ -393,7 +399,7 @@
                         <h2 class="text-6xl font-black mb-8 border-b-8 border-black pb-4 text-center">
                             ${slice[0].date.toLocaleDateString()} — ${slice[slice.length-1].date.toLocaleDateString()}
                         </h2>
-                        <div class="grid grid-cols-7 border-8 border-black">
+                        <div class="calendar-grid-container border-8 border-black">
                             ${DAYS.map(d => `<div class="p-4 border-r-4 border-b-8 border-black font-black text-4xl bg-slate-100 text-center">${d}</div>`).join('')}
                             ${slice.map(d => `
                                 <div class="border-r-4 border-b-4 border-black p-4 min-h-[450px]">
