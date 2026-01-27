@@ -57,6 +57,31 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
+
+            /* Make all text bold by default */
+            body, .day-cell, .activity-text, .event-label, .day-number, .weekday, .time-input, .time-display {
+                font-weight: bold !important;
+            }
+
+            /* Minimize weekend columns - hide time/plan boxes */
+            .day-cell.weekend .activity-list {
+                display: none !important;
+            }
+            .day-cell.weekend {
+                min-height: 50px !important;
+            }
+
+            /* Prevent weeks from being cut off - keep each week row together */
+            .week-row {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Ensure weekday header row stays with first week */
+            .weekday-header-row {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
         }
 
         /* Responsive font sizes for mobile */
@@ -156,6 +181,12 @@
         }
 
         .calendar-grid {
+            display: block;
+            width: 100%;
+        }
+
+        /* Week row and header row wrappers - each is a grid row */
+        .week-row, .weekday-header-row {
             display: grid;
             grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr 1fr 0.5fr;
             width: 100%;
@@ -1136,12 +1167,16 @@
                 const monthHeader = document.getElementById('month-name');
                 grid.innerHTML = '';
 
+                // Wrap weekday headers in a row for page-break control
+                const headerRow = document.createElement('div');
+                headerRow.className = 'weekday-header-row';
                 App.config.WEEKDAYS.forEach(day => {
                     const div = document.createElement('div');
                     div.className = 'weekday';
                     div.innerText = day;
-                    grid.appendChild(div);
+                    headerRow.appendChild(div);
                 });
+                grid.appendChild(headerRow);
 
                 if (App.state.viewMode === 'MONTH') {
                     App.render.monthView(grid, monthHeader);
@@ -1168,11 +1203,35 @@
                 const lastDay = new Date(App.state.currentYear, App.state.currentMonth + 1, 0).getDate();
                 const prevLastDay = new Date(App.state.currentYear, App.state.currentMonth, 0).getDate();
 
+                // Collect all cells first
+                const allCells = [];
                 for (let i = firstDay; i > 0; i--) {
-                    grid.appendChild(App.render.createCell(prevLastDay - i + 1, false, -1));
+                    allCells.push(App.render.createCell(prevLastDay - i + 1, false, -1));
                 }
                 for (let i = 1; i <= lastDay; i++) {
-                    grid.appendChild(App.render.createCell(i, true));
+                    allCells.push(App.render.createCell(i, true));
+                }
+
+                // Group cells into week-rows (7 cells per row) for page-break control
+                let weekRow = document.createElement('div');
+                weekRow.className = 'week-row';
+                allCells.forEach((cell, index) => {
+                    weekRow.appendChild(cell);
+                    if ((index + 1) % 7 === 0) {
+                        grid.appendChild(weekRow);
+                        weekRow = document.createElement('div');
+                        weekRow.className = 'week-row';
+                    }
+                });
+                // Append any remaining cells in the last partial week
+                if (weekRow.children.length > 0) {
+                    // Fill remaining slots with empty cells for the last week
+                    while (weekRow.children.length < 7) {
+                        const emptyCell = document.createElement('div');
+                        emptyCell.className = 'day-cell not-current-month';
+                        weekRow.appendChild(emptyCell);
+                    }
+                    grid.appendChild(weekRow);
                 }
             },
 
@@ -1181,11 +1240,15 @@
                 weekEnd.setDate(App.state.currentWeekStart.getDate() + 6);
                 header.innerText = `Week of ${App.state.currentWeekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
 
+                // Wrap week in a week-row for consistency
+                const weekRow = document.createElement('div');
+                weekRow.className = 'week-row';
                 for (let i = 0; i < 7; i++) {
                     const d = new Date(App.state.currentWeekStart);
                     d.setDate(App.state.currentWeekStart.getDate() + i);
-                    grid.appendChild(App.render.createCellFromDate(d));
+                    weekRow.appendChild(App.render.createCellFromDate(d));
                 }
+                grid.appendChild(weekRow);
             },
 
             createCellFromDate: function(dateObj) {
@@ -1207,6 +1270,12 @@
                         if (targetMonth < 0) { targetMonth = 11; targetYear--; }
                     }
                     dateObj = new Date(targetYear, targetMonth, day);
+                }
+
+                // Add weekend class for Saturday (6) and Sunday (0)
+                const dayOfWeek = dateObj.getDay();
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    cell.classList.add('weekend');
                 }
 
                 if (App.state.viewMode === 'MONTH' && !isCurrent) {
