@@ -1082,6 +1082,10 @@
 
             const isRecurring = recurringDays.length > 0;
 
+            // Convert date from MM/DD/YYYY to YYYY-MM-DD
+            const [month, day, year] = dateStr.split('/');
+            const formattedDate = `${year}-${month}-${day}`;
+
             if (editingEventId) {
                 // Update existing event
                 const eventIndex = events.findIndex(e => e.id === editingEventId);
@@ -1089,7 +1093,7 @@
                     events[eventIndex] = {
                         id: editingEventId,
                         title,
-                        date: dateStr.split('/').reverse().join('-'),
+                        date: formattedDate,
                         time,
                         eventType,
                         description,
@@ -1102,7 +1106,7 @@
                 const newEvent = {
                     id: Date.now().toString(),
                     title,
-                    date: dateStr.split('/').reverse().join('-'),
+                    date: formattedDate,
                     time,
                     eventType,
                     description,
