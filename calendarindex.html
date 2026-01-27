@@ -1086,10 +1086,11 @@
                 // Update existing event
                 const eventIndex = events.findIndex(e => e.id === editingEventId);
                 if (eventIndex !== -1) {
+                    const [month, day, year] = dateStr.split('/');
                     events[eventIndex] = {
                         id: editingEventId,
                         title,
-                        date: dateStr.split('/').reverse().join('-'),
+                        date: `${year}-${month}-${day}`,
                         time,
                         eventType,
                         description,
@@ -1099,10 +1100,11 @@
                 }
             } else {
                 // Create new event
+                const [month, day, year] = dateStr.split('/');
                 const newEvent = {
                     id: Date.now().toString(),
                     title,
-                    date: dateStr.split('/').reverse().join('-'),
+                    date: `${year}-${month}-${day}`,
                     time,
                     eventType,
                     description,
