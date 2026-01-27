@@ -126,7 +126,7 @@
 
         .weekdays {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             background-color: #FF6B6B;
             gap: 0;
             border-bottom: 3px solid #000;
@@ -151,7 +151,7 @@
 
         .days-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 0;
         }
 
@@ -292,6 +292,7 @@
 
         input[type="text"],
         input[type="time"],
+        input[type="color"],
         select,
         textarea {
             font-family: 'Comic Sans MS', 'Comic Sans', cursive;
@@ -302,6 +303,11 @@
             border: 2px solid #000;
             border-radius: 8px;
             background-color: #f9f9f9;
+        }
+
+        input[type="color"] {
+            height: 50px;
+            cursor: pointer;
         }
 
         textarea {
@@ -395,13 +401,29 @@
         }
 
         @media print {
+            @page {
+                size: landscape;
+                margin: 0.5in;
+            }
+
             body {
                 background-color: white;
-                padding: 10px;
+                padding: 5px;
             }
 
             header {
                 page-break-after: avoid;
+                font-size: 16pt;
+                padding: 10px;
+            }
+
+            header h1 {
+                font-size: 20pt;
+                margin-bottom: 5px;
+            }
+
+            header p {
+                display: none;
             }
 
             .controls {
@@ -416,21 +438,49 @@
                 display: none;
             }
 
+            .month-year {
+                font-size: 16pt;
+                padding: 8px;
+                margin: 5px 0;
+            }
+
             .calendar-container {
                 page-break-inside: avoid;
-                border: 2px solid #000;
+                border: 1px solid #000;
+                margin-bottom: 0.3in;
+            }
+
+            .weekdays {
+                grid-template-columns: repeat(5, 1fr);
+            }
+
+            .days-grid {
+                grid-template-columns: repeat(5, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                page-break-inside: avoid;
             }
 
             .day {
-                min-height: 80px;
+                min-height: 2.5in;
                 border: 1px solid #000;
                 page-break-inside: avoid;
+                padding: 5px;
+            }
+
+            .day-number {
+                font-size: 14pt;
+                margin-bottom: 5px;
             }
 
             .event {
-                font-size: 11pt;
-                padding: 3px;
+                font-size: 10pt;
+                padding: 2px;
                 border: 1px solid #000;
+                line-height: 1.2;
+            }
+
+            .event-time {
+                font-size: 9pt;
             }
 
             button {
@@ -438,12 +488,16 @@
             }
 
             .color-legend {
-                page-break-inside: avoid;
+                display: none;
             }
 
             .monthly-summary {
-                page-break-inside: avoid;
-                border: 2px solid #000;
+                display: none;
+            }
+
+            .weekday {
+                padding: 8px;
+                font-size: 14pt;
             }
         }
 
@@ -653,8 +707,6 @@
             <div class="weekday">WED</div>
             <div class="weekday">THU</div>
             <div class="weekday">FRI</div>
-            <div class="weekday weekend">SAT</div>
-            <div class="weekday weekend">SUN</div>
         </div>
         <div class="days-grid" id="daysGrid"></div>
     </div>
@@ -695,6 +747,11 @@
                     <option value="timed">⏰ Timed Event</option>
                     <option value="deadline">📌 Deadline</option>
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label for="eventColor">Event Color</label>
+                <input type="color" id="eventColor" value="#90EE90">
             </div>
 
             <div class="form-group">
@@ -879,6 +936,16 @@
             return `${month}/${day}/${year}`;
         }
 
+        // Adjust color brightness for borders
+        function adjustColorBrightness(color, percent) {
+            const num = parseInt(color.replace("#", ""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+            const G = Math.max(0, Math.min(255, (num >> 8 & 0x00FF) + amt));
+            const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+            return "#" + (0x1000000 + (R << 16) + (G << 8) + B).toString(16).slice(1);
+        }
+
         // Render calendar
         function renderCalendar() {
             const year = currentDate.getFullYear();
@@ -900,27 +967,36 @@
             const daysGrid = document.getElementById('daysGrid');
             daysGrid.innerHTML = '';
 
-            // Previous month's days
+            // Previous month's days (Mon-Fri only)
             for (let i = adjustedFirstDay - 1; i >= 0; i--) {
                 const dayNum = daysInPrevMonth - i;
                 const dayElement = createDayElement(dayNum, true, null);
                 daysGrid.appendChild(dayElement);
             }
 
-            // Current month's days
+            // Current month's days (Mon-Fri only, skip weekends)
             for (let day = 1; day <= daysInMonth; day++) {
                 const date = new Date(year, month, day);
+                const dayOfWeek = date.getDay();
+
+                // Skip Saturdays (6) and Sundays (0)
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    continue;
+                }
+
                 const isToday = isDateToday(date);
                 const dayElement = createDayElement(day, false, date, isToday);
                 daysGrid.appendChild(dayElement);
             }
 
-            // Next month's days
+            // Next month's days (Mon-Fri only)
             const totalCells = daysGrid.children.length;
-            const remainingCells = 42 - totalCells; // 6 rows × 7 days
-            for (let day = 1; day <= remainingCells; day++) {
-                const dayElement = createDayElement(day, true, null);
-                daysGrid.appendChild(dayElement);
+            const remainingCells = 10 - (totalCells % 10); // 2 weeks × 5 days = 10
+            if (remainingCells < 10) {
+                for (let day = 1; day <= remainingCells; day++) {
+                    const dayElement = createDayElement(day, true, null);
+                    daysGrid.appendChild(dayElement);
+                }
             }
         }
 
@@ -934,11 +1010,6 @@
             }
 
             if (date) {
-                const dayOfWeek = date.getDay();
-                if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    dayElement.classList.add('weekend');
-                }
-
                 if (isToday) {
                     dayElement.classList.add('today');
                 }
@@ -960,6 +1031,12 @@
                     dayEvents.forEach(event => {
                         const eventElement = document.createElement('div');
                         eventElement.className = `event ${event.eventType}`;
+
+                        // Apply custom color if available
+                        if (event.color) {
+                            eventElement.style.backgroundColor = event.color;
+                            eventElement.style.borderColor = adjustColorBrightness(event.color, -30);
+                        }
 
                         let eventText = event.title;
                         if (event.time) {
@@ -1009,6 +1086,7 @@
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventTime').value = '';
             document.getElementById('eventType').value = 'new';
+            document.getElementById('eventColor').value = '#90EE90';
             document.getElementById('eventDescription').value = '';
             document.getElementById('eventDate').value = formatDateDisplay(formatDate(date));
 
@@ -1024,6 +1102,7 @@
                     document.getElementById('eventTitle').value = event.title;
                     document.getElementById('eventTime').value = event.time || '';
                     document.getElementById('eventType').value = event.eventType;
+                    document.getElementById('eventColor').value = event.color || '#90EE90';
                     document.getElementById('eventDescription').value = event.description || '';
 
                     if (event.recurringDays) {
@@ -1063,6 +1142,7 @@
             const title = document.getElementById('eventTitle').value.trim();
             const time = document.getElementById('eventTime').value;
             const eventType = document.getElementById('eventType').value;
+            const color = document.getElementById('eventColor').value;
             const description = document.getElementById('eventDescription').value;
             const dateStr = document.getElementById('eventDate').value;
 
@@ -1096,6 +1176,7 @@
                         date: formattedDate,
                         time,
                         eventType,
+                        color,
                         description,
                         recurring: isRecurring,
                         recurringDays: isRecurring ? recurringDays : []
@@ -1109,6 +1190,7 @@
                     date: formattedDate,
                     time,
                     eventType,
+                    color,
                     description,
                     recurring: isRecurring,
                     recurringDays: isRecurring ? recurringDays : []
@@ -1188,6 +1270,7 @@
                 date: formatDate(today),
                 time: time || '',
                 eventType: eventType,
+                color: '#90EE90',
                 description: '',
                 recurring: false,
                 recurringDays: []
